@@ -1,0 +1,5 @@
+event_date,user_id,cid,action
+20260805,u-1,10001_0001,open
+20260805,u-1,10001_0001,click
+20260806,u-2,10001_0001,open
+

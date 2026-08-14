@@ -1,0 +1,1316 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="dark" />
+    <title>埋点数据查询终端</title>
+    <script src="/assets/date-range-picker.js"></script>
+    <style>
+      :root {
+        --void: #070908;
+        --surface: #0b0e0c;
+        --surface-raised: #101411;
+        --ink: #f0f2ec;
+        --soft: #b7bdb5;
+        --muted: #727a73;
+        --line: #252a26;
+        --line-strong: #3b423c;
+        --mint: #9bf2c7;
+        --mint-ink: #07130d;
+        --amber: #f2c36b;
+        --danger: #ff8c82;
+        --mono: "Cascadia Code", "IBM Plex Mono", "SFMono-Regular", Consolas, monospace;
+        --display: "Noto Serif SC", "Source Han Serif SC", "Songti SC", Georgia, serif;
+      }
+
+      * { box-sizing: border-box; }
+
+      html { background: var(--void); }
+
+      body {
+        min-height: 100vh;
+        margin: 0;
+        color: var(--ink);
+        background:
+          radial-gradient(circle at 14% -20%, rgba(155, 242, 199, .09), transparent 38rem),
+          linear-gradient(rgba(255,255,255,.017) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(255,255,255,.017) 1px, transparent 1px),
+          var(--void);
+        background-size: auto, 28px 28px, 28px 28px, auto;
+        font-family: var(--mono);
+      }
+
+      body::after {
+        content: "";
+        position: fixed;
+        inset: 0;
+        z-index: -1;
+        pointer-events: none;
+        opacity: .16;
+        background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 160 160' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.82' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.2'/%3E%3C/svg%3E");
+      }
+
+      button, textarea, input, select { font: inherit; }
+
+      [hidden] { display: none !important; }
+
+      .auth-screen {
+        position: fixed;
+        inset: 0;
+        z-index: 20;
+        display: grid;
+        place-items: center;
+        padding: 22px;
+        background:
+          radial-gradient(circle at 50% 20%, rgba(155, 242, 199, .09), transparent 30rem),
+          linear-gradient(rgba(255,255,255,.017) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(255,255,255,.017) 1px, transparent 1px),
+          var(--void);
+        background-size: auto, 28px 28px, 28px 28px, auto;
+      }
+
+      .auth-card {
+        width: min(430px, 100%);
+        border: 1px solid var(--line-strong);
+        background: rgba(8, 11, 9, .94);
+        box-shadow: 0 30px 100px rgba(0,0,0,.55);
+      }
+
+      .auth-card-body { padding: 34px; }
+      .auth-card h2 { margin: 0 0 8px; font: 500 30px/1.2 var(--display); }
+      .auth-card p { margin: 0 0 28px; color: var(--muted); font: 13px/1.7 var(--display); }
+      .auth-field { display: grid; gap: 8px; margin-top: 16px; }
+      .auth-field label { color: var(--muted); font-size: 10px; letter-spacing: .1em; }
+      .auth-field input {
+        min-height: 48px;
+        border: 1px solid var(--line-strong);
+        outline: 0;
+        padding: 0 14px;
+        color: var(--ink);
+        background: #070a08;
+      }
+      .auth-field input:focus { border-color: var(--mint); }
+      .auth-submit { width: 100%; margin-top: 24px; color: var(--mint-ink); border-color: var(--mint); background: var(--mint); }
+      .auth-error { min-height: 20px; margin-top: 14px; color: var(--danger); font-size: 11px; }
+
+      .app-shell {
+        width: min(1380px, calc(100% - 40px));
+        margin: 0 auto;
+        padding: 20px 0 36px;
+      }
+
+      .topbar {
+        display: flex;
+        align-items: center;
+        min-height: 46px;
+        border-bottom: 1px solid var(--line);
+        color: var(--muted);
+        font-size: 11px;
+        letter-spacing: .09em;
+        text-transform: uppercase;
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        color: var(--ink);
+        font-weight: 700;
+        letter-spacing: .14em;
+      }
+
+      .brand-mark {
+        display: grid;
+        grid-template-columns: repeat(2, 4px);
+        gap: 3px;
+      }
+
+      .brand-mark i {
+        width: 4px;
+        height: 4px;
+        background: var(--mint);
+        box-shadow: 0 0 10px rgba(155, 242, 199, .5);
+      }
+
+      .topbar-spacer { flex: 1; }
+
+      .status-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        min-height: 26px;
+        margin-left: 20px;
+        padding: 0 10px;
+        border: 1px solid var(--line);
+      }
+
+      .topbar-action {
+        min-width: auto;
+        min-height: 26px;
+        margin-left: 10px;
+        padding: 0 10px;
+        border-color: var(--line);
+        color: var(--muted);
+        background: transparent;
+        font: 10px var(--mono);
+      }
+
+      .status-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--mint);
+        box-shadow: 0 0 9px rgba(155, 242, 199, .65);
+      }
+
+      .intro {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: end;
+        gap: 30px;
+        padding: 50px 0 28px;
+        animation: enter .5s ease-out both;
+      }
+
+      .kicker {
+        margin-bottom: 12px;
+        color: var(--mint);
+        font-size: 11px;
+        letter-spacing: .16em;
+        text-transform: uppercase;
+      }
+
+      h1 {
+        margin: 0;
+        font-family: var(--display);
+        font-size: clamp(34px, 4.5vw, 64px);
+        font-weight: 500;
+        line-height: 1.08;
+        letter-spacing: -.04em;
+      }
+
+      .intro-copy {
+        max-width: 370px;
+        margin: 0 0 5px;
+        color: var(--soft);
+        font-family: var(--display);
+        font-size: 14px;
+        line-height: 1.8;
+      }
+
+      .workspace {
+        display: grid;
+        grid-template-columns: minmax(0, 1.45fr) minmax(340px, .75fr);
+        min-height: 590px;
+        border: 1px solid var(--line-strong);
+        background: rgba(8, 11, 9, .88);
+        box-shadow: 0 30px 100px rgba(0, 0, 0, .44);
+        animation: enter .6s .06s ease-out both;
+      }
+
+      .console,
+      .receipt { min-width: 0; }
+
+      .console {
+        display: flex;
+        flex-direction: column;
+        border-right: 1px solid var(--line-strong);
+      }
+
+      .panel-head {
+        display: flex;
+        align-items: center;
+        min-height: 46px;
+        padding: 0 18px;
+        border-bottom: 1px solid var(--line);
+        color: var(--muted);
+        font-size: 10px;
+        letter-spacing: .12em;
+        text-transform: uppercase;
+      }
+
+      .panel-head strong {
+        margin-right: 10px;
+        color: var(--ink);
+        font-weight: 500;
+      }
+
+      .panel-head span:last-child { margin-left: auto; }
+
+      .terminal-body {
+        display: flex;
+        flex: 1;
+        flex-direction: column;
+        padding: clamp(22px, 3vw, 38px);
+      }
+
+      .prompt-label {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 12px;
+        color: var(--soft);
+        font-size: 12px;
+      }
+
+      .prompt-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 14px;
+      }
+
+      .date-range-control {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 12px;
+        color: var(--muted);
+        font-size: 10px;
+        letter-spacing: .08em;
+      }
+
+      .date-range-control date-range-picker { width: 276px; }
+
+      .quota-modal { position: fixed; inset: 0; z-index: 30; display: grid; place-items: center; padding: 22px; background: rgba(3,5,4,.82); backdrop-filter: blur(8px); }
+      .quota-dialog { width: min(460px,100%); border: 1px solid var(--danger); background: #090c0a; box-shadow: 0 30px 100px rgba(0,0,0,.7); }
+      .quota-dialog-body { padding: 32px; }
+      .quota-dialog .signal { color: var(--danger); font-size: 11px; letter-spacing: .14em; }
+      .quota-dialog h2 { margin: 12px 0 10px; font: 500 27px/1.25 var(--display); }
+      .quota-dialog p { margin: 0; color: var(--soft); font: 14px/1.8 var(--display); }
+      .quota-dialog button { width: 100%; margin-top: 24px; border-color: var(--danger); color: var(--danger); background: transparent; }
+
+      .prompt-symbol { color: var(--mint); }
+
+      .input-frame {
+        position: relative;
+        border: 1px solid var(--line-strong);
+        background: #070a08;
+        transition: border-color .2s, box-shadow .2s;
+      }
+
+      .input-frame:focus-within {
+        border-color: rgba(155, 242, 199, .7);
+        box-shadow: 0 0 0 3px rgba(155, 242, 199, .06), 0 18px 60px rgba(0, 0, 0, .3);
+      }
+
+      textarea {
+        display: block;
+        width: 100%;
+        min-height: 112px;
+        resize: vertical;
+        border: 0;
+        outline: 0;
+        padding: 19px 46px 34px 20px;
+        color: var(--ink);
+        background: transparent;
+        font-family: var(--display);
+        font-size: 18px;
+        line-height: 1.65;
+      }
+
+      textarea::placeholder { color: #515752; }
+
+      .cursor {
+        position: absolute;
+        right: 20px;
+        top: 23px;
+        width: 8px;
+        height: 17px;
+        background: var(--mint);
+        opacity: .8;
+        animation: blink 1.05s steps(1) infinite;
+      }
+
+      .input-meta {
+        position: absolute;
+        right: 14px;
+        bottom: 10px;
+        color: var(--muted);
+        font-size: 9px;
+        letter-spacing: .1em;
+      }
+
+      .run-log {
+        display: grid;
+        gap: 0;
+        margin: 26px 0 0;
+        padding: 0;
+        list-style: none;
+        counter-reset: line;
+      }
+
+      .log-line {
+        display: grid;
+        grid-template-columns: 34px 18px minmax(0, 1fr) auto;
+        align-items: baseline;
+        min-height: 38px;
+        border-bottom: 1px solid rgba(37, 42, 38, .68);
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.5;
+      }
+
+      .log-line::before {
+        counter-increment: line;
+        content: counter(line, decimal-leading-zero);
+        color: #3f4540;
+        font-size: 9px;
+      }
+
+      .log-icon { color: #555d56; }
+      .log-value { color: var(--soft); }
+      .log-time { color: #4f5650; font-size: 9px; }
+      .log-line[data-state="active"] .log-icon,
+      .log-line[data-state="active"] .log-value { color: var(--amber); }
+      .log-line[data-state="success"] .log-icon,
+      .log-line[data-state="success"] .log-value { color: var(--mint); }
+      .log-line[data-state="error"] .log-icon,
+      .log-line[data-state="error"] .log-value { color: var(--danger); }
+
+      .console-note {
+        margin: auto 0 0;
+        padding-top: 26px;
+        color: var(--muted);
+        font-family: var(--display);
+        font-size: 12px;
+        line-height: 1.75;
+      }
+
+      .receipt {
+        display: flex;
+        flex-direction: column;
+        background: linear-gradient(150deg, rgba(255,255,255,.025), transparent 48%);
+      }
+
+      .receipt-body { padding: clamp(22px, 3vw, 34px); }
+
+      .receipt-status {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 18px;
+        min-height: 91px;
+        padding-bottom: 24px;
+        border-bottom: 1px dashed var(--line-strong);
+      }
+
+      .receipt-status small {
+        display: block;
+        margin-bottom: 9px;
+        color: var(--muted);
+        font-size: 9px;
+        letter-spacing: .12em;
+      }
+
+      .receipt-status strong {
+        color: var(--soft);
+        font-family: var(--display);
+        font-size: 20px;
+        font-weight: 500;
+      }
+
+      .status-code {
+        padding: 5px 7px;
+        border: 1px solid var(--line-strong);
+        color: var(--muted);
+        font-size: 9px;
+        letter-spacing: .08em;
+      }
+
+      .receipt[data-state="ready"] .receipt-status strong,
+      .receipt[data-state="ready"] .status-code { color: var(--mint); }
+      .receipt[data-state="error"] .receipt-status strong,
+      .receipt[data-state="error"] .status-code { color: var(--danger); }
+
+      .metrics { margin: 10px 0 0; }
+
+      .metric {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: baseline;
+        gap: 14px;
+        min-height: 50px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .metric dt {
+        color: var(--muted);
+        font-family: var(--display);
+        font-size: 12px;
+      }
+
+      .metric dd {
+        margin: 0;
+        color: var(--soft);
+        font-size: 12px;
+        text-align: right;
+      }
+
+      .amount-row {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 16px;
+        margin-top: 28px;
+      }
+
+      .amount-row span {
+        color: var(--muted);
+        font-size: 10px;
+        letter-spacing: .1em;
+      }
+
+      .amount-row strong {
+        color: var(--ink);
+        font-size: clamp(28px, 3.5vw, 45px);
+        font-weight: 400;
+        letter-spacing: -.06em;
+      }
+
+      .scan-track {
+        height: 3px;
+        margin-top: 13px;
+        overflow: hidden;
+        background: var(--line);
+      }
+
+      .scan-progress {
+        width: var(--progress, 0%);
+        height: 100%;
+        background: var(--mint);
+        box-shadow: 0 0 16px rgba(155, 242, 199, .5);
+        transition: width .65s cubic-bezier(.22, 1, .36, 1);
+      }
+
+      .disclaimer {
+        margin-top: 17px;
+        padding: 12px 13px;
+        border-left: 2px solid var(--amber);
+        color: var(--soft);
+        background: rgba(242, 195, 107, .045);
+        font-family: var(--display);
+        font-size: 11px;
+        line-height: 1.65;
+      }
+
+      .action-rail {
+        display: grid;
+        grid-template-columns: 1fr 42px 1fr;
+        align-items: stretch;
+        margin-top: 16px;
+        border: 1px solid var(--line-strong);
+        background: var(--surface);
+        animation: enter .65s .1s ease-out both;
+      }
+
+      .action-step {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 13px;
+        min-width: 0;
+        min-height: 78px;
+        padding: 12px 14px 12px 18px;
+      }
+
+      .step-number {
+        color: var(--muted);
+        font-size: 10px;
+        letter-spacing: .12em;
+      }
+
+      .step-copy strong {
+        display: block;
+        color: var(--ink);
+        font-family: var(--display);
+        font-size: 14px;
+        font-weight: 500;
+      }
+
+      .step-copy span {
+        display: block;
+        margin-top: 5px;
+        overflow: hidden;
+        color: var(--muted);
+        font-size: 9px;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .gate {
+        position: relative;
+        display: grid;
+        place-items: center;
+        color: #4c534d;
+        font-size: 15px;
+      }
+
+      .gate::before,
+      .gate::after {
+        content: "";
+        position: absolute;
+        left: 50%;
+        width: 1px;
+        height: 22px;
+        background: var(--line);
+      }
+
+      .gate::before { top: 0; }
+      .gate::after { bottom: 0; }
+      .gate[data-open="true"] { color: var(--mint); }
+      .gate[data-open="true"]::before,
+      .gate[data-open="true"]::after { background: var(--mint); }
+
+      button {
+        min-width: 132px;
+        min-height: 46px;
+        border: 1px solid var(--line-strong);
+        border-radius: 0;
+        padding: 0 18px;
+        color: var(--ink);
+        background: transparent;
+        cursor: pointer;
+        font-family: var(--display);
+        font-size: 13px;
+        font-weight: 600;
+        transition: transform .18s, border-color .18s, background .18s, color .18s;
+      }
+
+      button:not(:disabled):hover {
+        transform: translateY(-2px);
+        border-color: var(--mint);
+      }
+
+      button:focus-visible { outline: 2px solid var(--mint); outline-offset: 3px; }
+      button:disabled { color: #555c56; background: #0b0e0c; cursor: not-allowed; }
+      #estimateButton { color: var(--mint-ink); border-color: var(--mint); background: var(--mint); }
+      #estimateButton:disabled { color: #717a73; border-color: #303631; background: #1a1e1b; }
+      #submitButton:not(:disabled) { color: var(--mint); border-color: var(--mint); }
+
+      .result-panel {
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+        min-height: 42px;
+        margin-top: 12px;
+        color: var(--muted);
+        font-family: var(--display);
+        font-size: 12px;
+        line-height: 1.65;
+      }
+
+      .result-panel::before { content: "//"; color: #4c534d; font-family: var(--mono); }
+      .result-panel[data-state="ready"] { color: var(--mint); }
+      .result-panel[data-state="error"] { color: var(--danger); }
+      .result-panel a { color: var(--mint); text-underline-offset: 4px; }
+
+      .analytics-panel {
+        margin-top: 22px;
+        border: 1px solid var(--line-strong);
+        background: rgba(8, 11, 9, .88);
+        animation: enter .45s ease-out both;
+      }
+
+      .analytics-body {
+        display: grid;
+        grid-template-columns: minmax(0, 1.5fr) minmax(290px, .5fr);
+        gap: 28px;
+        padding: clamp(20px, 3vw, 34px);
+      }
+
+      .chart-wrap { min-width: 0; overflow-x: auto; }
+      #pvUvChart { display: block; width: 100%; min-width: 540px; height: 245px; }
+      .chart-grid { stroke: var(--line); stroke-width: 1; }
+      .chart-label { fill: var(--muted); font: 10px var(--mono); }
+      .chart-pv { fill: var(--mint); }
+      .chart-uv { fill: var(--amber); }
+
+      .chart-legend {
+        display: flex;
+        gap: 18px;
+        margin-top: 12px;
+        color: var(--muted);
+        font-size: 10px;
+      }
+      .chart-legend i { display: inline-block; width: 8px; height: 8px; margin-right: 7px; }
+      .chart-legend .pv i { background: var(--mint); }
+      .chart-legend .uv i { background: var(--amber); }
+
+      .analytics-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+      .analytics-table th,
+      .analytics-table td { padding: 12px 8px; border-bottom: 1px solid var(--line); text-align: right; }
+      .analytics-table th { color: var(--muted); font-weight: 400; }
+      .analytics-table th:first-child,
+      .analytics-table td:first-child { text-align: left; }
+      .analytics-table td:nth-child(2) { color: var(--mint); }
+      .analytics-table td:nth-child(3) { color: var(--amber); }
+
+      @keyframes enter {
+        from { opacity: 0; transform: translateY(12px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+
+      @keyframes blink { 0%, 48% { opacity: .85; } 49%, 100% { opacity: 0; } }
+
+      @media (max-width: 900px) {
+        .intro { grid-template-columns: 1fr; padding-top: 38px; }
+        .intro-copy { max-width: 620px; }
+        .workspace { grid-template-columns: 1fr; }
+        .console { border-right: 0; border-bottom: 1px solid var(--line-strong); }
+        .action-rail { grid-template-columns: 1fr; }
+        .gate { min-height: 34px; transform: rotate(90deg); }
+        .gate::before, .gate::after { display: none; }
+        .analytics-body { grid-template-columns: 1fr; }
+      }
+
+      @media (max-width: 620px) {
+        .app-shell { width: min(100% - 20px, 1380px); padding-top: 8px; }
+        .topbar .status-chip:first-of-type { display: none; }
+        .status-chip { margin-left: 10px; }
+        .intro { padding: 30px 4px 20px; }
+        .intro-copy { display: none; }
+        .terminal-body, .receipt-body { padding: 20px 16px; }
+        .log-line { grid-template-columns: 28px 16px minmax(0, 1fr); }
+        .log-time { display: none; }
+        .action-step { grid-template-columns: 25px minmax(0, 1fr); padding: 14px; }
+        .action-step button { grid-column: 1 / -1; width: 100%; }
+        .prompt-row { align-items: flex-start; flex-direction: column; }
+        .date-range-control { width: 100%; align-items: center; }
+        .date-range-control date-range-picker { flex: 1; width: auto; }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        *, *::before, *::after { animation: none !important; transition: none !important; }
+      }
+
+    </style>
+  </head>
+  <body>
+    <section class="quota-modal" id="quotaModal" hidden role="dialog" aria-modal="true" aria-labelledby="quotaTitle">
+      <div class="quota-dialog">
+        <div class="panel-head"><strong>Balance guard</strong><span>每日额度保护</span><span>LIMIT / STOP</span></div>
+        <div class="quota-dialog-body"><div class="signal">EXPORT BLOCKED</div><h2 id="quotaTitle">今日查询额度不足</h2><p>超过今天查询余额上限，请联系yzr</p><button id="quotaClose" type="button">确认并返回</button></div>
+      </div>
+    </section>
+    <section class="auth-screen" id="authScreen">
+      <form class="auth-card" id="loginForm">
+        <div class="panel-head"><strong>Secure access</strong><span>身份验证</span><span>SESSION / LOGIN</span></div>
+        <div class="auth-card-body">
+          <div class="kicker">MARK / EVENT OPS</div>
+          <h2>登录查询终端</h2>
+          <p>请使用分配给你的内部账号登录。访问、费用评估和导出行为将被记录用于资源审计。</p>
+          <div class="auth-field"><label for="loginUsername">ACCOUNT / 账号</label><input id="loginUsername" name="username" autocomplete="username" required /></div>
+          <div class="auth-field"><label for="loginPassword">PASSWORD / 密码</label><input id="loginPassword" name="password" type="password" autocomplete="current-password" required /></div>
+          <button class="auth-submit" id="loginButton" type="submit">进入终端</button>
+          <div class="auth-error" id="loginError" aria-live="polite"></div>
+        </div>
+      </form>
+    </section>
+
+    <main class="app-shell" id="appShell" hidden>
+      <nav class="topbar" aria-label="系统状态">
+        <div class="brand">
+          <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+          MARK / EVENT OPS
+        </div>
+        <div class="topbar-spacer"></div>
+        <span class="status-chip">ENV · PROD</span>
+        <span class="status-chip"><i class="status-dot"></i> ODPS CONNECTED</span>
+        <span class="status-chip" id="userChip">USER · —</span>
+        <span class="status-chip" id="windowChip">RANGE · —</span>
+        <button class="topbar-action" id="logoutButton" type="button">退出</button>
+      </nav>
+
+      <header class="intro">
+        <div>
+          <div class="kicker">MaxCompute event intelligence</div>
+          <h1>埋点数据查询终端</h1>
+        </div>
+        <p class="intro-copy">输入一个埋点问题，先审阅 ODPS 扫描成本，再决定是否执行真实查询。每一次动作都清晰可追踪。</p>
+      </header>
+
+      <section class="workspace">
+        <section class="console" aria-labelledby="consoleTitle">
+          <header class="panel-head">
+            <strong id="consoleTitle">Query console</strong>
+            <span>自然语言解析器</span>
+            <span>SESSION / LOCAL</span>
+          </header>
+          <div class="terminal-body">
+            <div class="prompt-row">
+              <label class="prompt-label" for="question"><span class="prompt-symbol">&gt;</span> 输入查询指令</label>
+              <div class="date-range-control"><span>日期范围</span><date-range-picker id="queryDateRange" aria-label="查询日期范围"></date-range-picker></div>
+            </div>
+            <div class="input-frame">
+              <textarea id="question" placeholder="例如：看看90056_0001的数据" autocomplete="off" spellcheck="false"></textarea>
+              <span class="cursor" aria-hidden="true"></span>
+              <span class="input-meta">CID / NATURAL LANGUAGE</span>
+            </div>
+
+            <ol class="run-log" aria-label="任务执行日志" aria-live="polite">
+              <li class="log-line" id="logParse" data-state="idle"><span class="log-icon">·</span><span class="log-value">等待解析事件编码</span><span class="log-time">IDLE</span></li>
+              <li class="log-line" id="logPartition" data-state="idle"><span class="log-icon">·</span><span class="log-value">等待生成 1 日查询分区</span><span class="log-time">IDLE</span></li>
+              <li class="log-line" id="logCost" data-state="idle"><span class="log-icon">·</span><span class="log-value">等待 ODPS COST SQL</span><span class="log-time">IDLE</span></li>
+              <li class="log-line" id="logQuery" data-state="idle"><span class="log-icon">·</span><span class="log-value">正式查询门禁未解锁</span><span class="log-time">LOCKED</span></li>
+            </ol>
+
+            <p class="console-note">系统默认查询昨天，可自定义最长 7 天的完整日期区间；今天及未来日期不可选择。修改输入或日期后，费用凭证会立即失效。</p>
+          </div>
+        </section>
+
+        <aside class="receipt" id="receipt" data-state="idle" aria-labelledby="receiptTitle">
+          <header class="panel-head">
+            <strong id="receiptTitle">Cost receipt</strong>
+            <span>费用评估回执</span>
+            <span id="receiptId">NO. —</span>
+          </header>
+          <div class="receipt-body">
+            <div class="receipt-status">
+              <div>
+                <small>ASSESSMENT STATUS</small>
+                <strong id="statusText">等待评估</strong>
+              </div>
+              <span class="status-code" id="statusCode">IDLE</span>
+            </div>
+
+            <dl class="metrics">
+              <div class="metric"><dt>事件编码 / CID</dt><dd id="eventCode">—</dd></div>
+              <div class="metric"><dt>查询分区 / RANGE</dt><dd id="partitions">等待选择日期</dd></div>
+              <div class="metric"><dt>预计扫描 / INPUT</dt><dd id="scanSize">—</dd></div>
+              <div class="metric"><dt>SQL 复杂度 / COMPLEXITY</dt><dd id="complexity">—</dd></div>
+              <div class="metric"><dt>UDF 数量 / COUNT</dt><dd id="udfCount">—</dd></div>
+              <div class="metric"><dt>参考单价 / PRICE</dt><dd id="unitPrice">—</dd></div>
+            </dl>
+
+            <div class="amount-row">
+              <span>ESTIMATED AMOUNT</span>
+              <strong id="amount">¥—</strong>
+            </div>
+            <div class="scan-track" aria-hidden="true"><div class="scan-progress" id="scanProgress"></div></div>
+            <div class="disclaimer" id="estimateState" aria-live="polite">当前仅展示评估入口，尚未调用 ODPS，也没有执行真实查询。</div>
+          </div>
+        </aside>
+      </section>
+
+      <section class="action-rail" aria-label="查询操作">
+        <div class="action-step">
+          <span class="step-number">01</span>
+          <div class="step-copy"><strong>费用评估</strong><span>只计算资源消耗，不读取明细结果</span></div>
+          <button id="estimateButton" type="button">开始评估</button>
+        </div>
+        <div class="gate" id="gate" data-open="false" aria-label="查询门禁">◇</div>
+        <div class="action-step">
+          <span class="step-number">02</span>
+          <div class="step-copy"><strong>导出数据</strong><span id="gateCopy">等待有效费用凭证</span></div>
+          <button id="submitButton" type="button" disabled>导出 XLSX</button>
+        </div>
+      </section>
+
+      <div class="result-panel" id="result" data-state="idle" aria-live="polite">尚未创建查询任务。</div>
+
+      <section class="analytics-panel" id="analyticsPanel" hidden aria-labelledby="analyticsTitle">
+        <header class="panel-head"><strong id="analyticsTitle">PV / UV analytics</strong><span>按 dt 聚合结果</span><span id="analyticsRange">RANGE · —</span></header>
+        <div class="analytics-body">
+          <div>
+            <div class="chart-wrap"><svg id="pvUvChart" viewBox="0 0 760 245" role="img" aria-label="按日期展示 PV 和 UV"></svg></div>
+            <div class="chart-legend"><span class="pv"><i></i>PV / 事件次数</span><span class="uv"><i></i>UV / 去重用户</span></div>
+          </div>
+          <div><table class="analytics-table"><thead><tr><th>日期</th><th>PV</th><th>UV</th></tr></thead><tbody id="analyticsRows"></tbody></table></div>
+        </div>
+      </section>
+    </main>
+
+    <script>
+      const $ = (selector) => document.querySelector(selector);
+      const authScreen = $('#authScreen');
+      const appShell = $('#appShell');
+      const loginForm = $('#loginForm');
+      const loginButton = $('#loginButton');
+      const loginError = $('#loginError');
+      const loginUsername = $('#loginUsername');
+      const loginPassword = $('#loginPassword');
+      const logoutButton = $('#logoutButton');
+      const userChip = $('#userChip');
+      const windowChip = $('#windowChip');
+      const queryDateRange = $('#queryDateRange');
+      const question = $('#question');
+      const quotaModal = $('#quotaModal');
+      const quotaClose = $('#quotaClose');
+      const estimateButton = $('#estimateButton');
+      const submitButton = $('#submitButton');
+      const receipt = $('#receipt');
+      const receiptId = $('#receiptId');
+      const statusText = $('#statusText');
+      const statusCode = $('#statusCode');
+      const eventCode = $('#eventCode');
+      const partitions = $('#partitions');
+      const scanSize = $('#scanSize');
+      const complexity = $('#complexity');
+      const udfCount = $('#udfCount');
+      const unitPrice = $('#unitPrice');
+      const amount = $('#amount');
+      const scanProgress = $('#scanProgress');
+      const estimateState = $('#estimateState');
+      const gate = $('#gate');
+      const gateCopy = $('#gateCopy');
+      const result = $('#result');
+      const logParse = $('#logParse');
+      const logPartition = $('#logPartition');
+      const logCost = $('#logCost');
+      const logQuery = $('#logQuery');
+      const analyticsPanel = $('#analyticsPanel');
+      const analyticsRange = $('#analyticsRange');
+      const analyticsRows = $('#analyticsRows');
+      const pvUvChart = $('#pvUvChart');
+
+      let estimateToken = null;
+      let estimatedQuestion = null;
+      let estimatedStartDate = null;
+      let estimatedEndDate = null;
+      let estimateExpiresAt = 0;
+      let visitId = null;
+      let visitHeartbeat = null;
+
+      const localDateString = (value) => {
+        const year = value.getFullYear();
+        const month = String(value.getMonth() + 1).padStart(2, '0');
+        const day = String(value.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      };
+
+      function initializeDateRange() {
+        const yesterday = new Date();
+        yesterday.setHours(12, 0, 0, 0);
+        yesterday.setDate(yesterday.getDate() - 1);
+        const max = localDateString(yesterday);
+        queryDateRange.setConstraints({maxDate: max, maxDays: 7});
+        queryDateRange.setRange(max, max);
+        updateDateRangeLabel();
+      }
+
+      function selectedDateRange() {
+        const selected = queryDateRange.getRange();
+        if (!selected) throw new Error('请选择开始日期和结束日期。');
+        const start = new Date(`${selected.start}T12:00:00`);
+        const end = new Date(`${selected.end}T12:00:00`);
+        const today = new Date(); today.setHours(0, 0, 0, 0);
+        if (start > end) throw new Error('开始日期不能晚于结束日期。');
+        if (end >= today) throw new Error('不能选择今天及以后的日期。');
+        const days = Math.round((end - start) / 86400000) + 1;
+        if (days > 7) throw new Error('查询时间区间最长为7天。');
+        return {start: selected.start, end: selected.end, days};
+      }
+
+      function updateDateRangeLabel() {
+        try {
+          const range = selectedDateRange();
+          windowChip.textContent = `RANGE · ${range.days}D`;
+          return range;
+        } catch {
+          windowChip.textContent = 'RANGE · INVALID';
+          return null;
+        }
+      }
+
+      function updateLog(element, state, message, stamp) {
+        element.dataset.state = state;
+        element.querySelector('.log-icon').textContent = state === 'success' ? '✓' : state === 'error' ? '×' : state === 'active' ? '>' : '·';
+        element.querySelector('.log-value').textContent = message;
+        element.querySelector('.log-time').textContent = stamp;
+      }
+
+      function setResult(message, state = 'idle') {
+        result.textContent = message;
+        result.dataset.state = state;
+      }
+
+      function setReceipt(state, title, code, message) {
+        receipt.dataset.state = state;
+        statusText.textContent = title;
+        statusCode.textContent = code;
+        estimateState.textContent = message;
+      }
+
+      function resetEstimate(message = '输入已发生变化，请重新执行费用评估。') {
+        estimateToken = null;
+        estimatedQuestion = null;
+        estimatedStartDate = null;
+        estimatedEndDate = null;
+        estimateExpiresAt = 0;
+        submitButton.disabled = true;
+        gate.dataset.open = 'false';
+        gate.textContent = '◇';
+        gateCopy.textContent = '等待有效费用凭证';
+        receiptId.textContent = 'NO. —';
+        eventCode.textContent = '—';
+        const range = updateDateRangeLabel();
+        partitions.textContent = range ? `${range.start} — ${range.end}` : '日期范围无效';
+        scanSize.textContent = '—';
+        complexity.textContent = '—';
+        udfCount.textContent = '—';
+        unitPrice.textContent = '—';
+        amount.textContent = '¥—';
+        scanProgress.style.setProperty('--progress', '0%');
+        setReceipt('idle', '等待评估', 'IDLE', message);
+        updateLog(logParse, 'idle', '等待解析事件编码', 'IDLE');
+        updateLog(logPartition, 'idle', range ? `等待生成 ${range.days} 日查询分区` : '等待有效日期范围', 'IDLE');
+        updateLog(logCost, 'idle', '等待 ODPS COST SQL', 'IDLE');
+        updateLog(logQuery, 'idle', '正式查询门禁未解锁', 'LOCKED');
+      }
+
+      function formatBytes(bytes) {
+        if (!Number.isFinite(bytes) || bytes <= 0) return '0 B';
+        const units = ['B', 'KiB', 'MiB', 'GiB', 'TiB'];
+        const index = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
+        return `${(bytes / (1024 ** index)).toFixed(index >= 3 ? 2 : 1)} ${units[index]}`;
+      }
+
+      function classifyError(error, phase) {
+        const raw = String(error?.message || error || '未知错误');
+        const text = raw.toLowerCase();
+        if (text.includes('failed to fetch') || text.includes('networkerror') || text.includes('network')) {
+          return {code: 'NETWORK', message: '无法连接后端服务，请确认服务已启动并刷新页面重试。'};
+        }
+        if (text.includes('timeout') || text.includes('超时')) {
+          return {code: phase === 'estimate' ? 'COST_TIMEOUT' : 'QUERY_TIMEOUT', message: 'ODPS 响应超时，请稍后重试。'};
+        }
+        if (text.includes('access') || text.includes('credential') || text.includes('auth') || text.includes('鉴权')) {
+          return {code: 'ODPS_AUTH', message: 'ODPS 鉴权失败，请检查 AccessKey、项目和 Endpoint 配置。'};
+        }
+        if (text.includes('sql') || text.includes('template') || text.includes('语法')) {
+          return {code: 'SQL_TEMPLATE', message: raw};
+        }
+        return {code: phase === 'estimate' ? 'ESTIMATE_FAILED' : 'QUERY_FAILED', message: raw};
+      }
+
+      async function readPayload(response) {
+        try { return await response.json(); }
+        catch { return {}; }
+      }
+
+      function showLogin(message = '') {
+        if (visitHeartbeat) window.clearInterval(visitHeartbeat);
+        visitHeartbeat = null;
+        visitId = null;
+        appShell.hidden = true;
+        authScreen.hidden = false;
+        loginError.textContent = message;
+        loginPassword.value = '';
+        window.setTimeout(() => loginUsername.focus(), 0);
+      }
+
+      async function startVisit() {
+        try {
+          const response = await fetch('/api/v1/usage/visits', {method: 'POST'});
+          if (!response.ok) return;
+          const payload = await readPayload(response);
+          visitId = payload.id;
+          visitHeartbeat = window.setInterval(() => sendVisitHeartbeat(false), 30000);
+        } catch { /* 审计失败不阻塞用户查询，但服务端仍会记录业务事件。 */ }
+      }
+
+      function sendVisitHeartbeat(final) {
+        if (!visitId) return;
+        const url = `/api/v1/usage/visits/${visitId}/heartbeat`;
+        const body = JSON.stringify({final});
+        if (final && navigator.sendBeacon) {
+          navigator.sendBeacon(url, new Blob([body], {type: 'application/json'}));
+          return;
+        }
+        fetch(url, {method: 'POST', headers: {'Content-Type': 'application/json'}, body, keepalive: final}).catch(() => {});
+      }
+
+      async function showApplication(user) {
+        authScreen.hidden = true;
+        appShell.hidden = false;
+        userChip.textContent = `USER · ${user.username}`;
+        resetEstimate('当前仅展示评估入口，尚未调用 ODPS，也没有执行真实查询。');
+        await startVisit();
+      }
+
+      async function initializeAuth() {
+        try {
+          const response = await fetch('/api/v1/auth/me');
+          if (!response.ok) return showLogin();
+          await showApplication(await readPayload(response));
+        } catch {
+          showLogin('无法连接后端服务，请确认服务已启动。');
+        }
+      }
+
+      loginForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        loginButton.disabled = true;
+        loginButton.textContent = '验证中…';
+        loginError.textContent = '';
+        try {
+          const response = await fetch('/api/v1/auth/login', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({username: loginUsername.value.trim(), password: loginPassword.value})
+          });
+          const payload = await readPayload(response);
+          if (!response.ok) throw new Error(payload.detail || '登录失败。');
+          await showApplication(payload);
+        } catch (error) {
+          loginError.textContent = error.message || '登录失败。';
+        } finally {
+          loginButton.disabled = false;
+          loginButton.textContent = '进入终端';
+        }
+      });
+
+      logoutButton.addEventListener('click', async () => {
+        sendVisitHeartbeat(true);
+        try { await fetch('/api/v1/auth/logout', {method: 'POST'}); }
+        finally { showLogin('已安全退出。'); }
+      });
+
+      window.addEventListener('pagehide', () => sendVisitHeartbeat(true));
+
+      function renderAnalytics(rows, rangeText) {
+        analyticsRows.replaceChildren();
+        pvUvChart.replaceChildren();
+        if (!Array.isArray(rows) || !rows.length) {
+          analyticsPanel.hidden = true;
+          return;
+        }
+        analyticsPanel.hidden = false;
+        analyticsRange.textContent = `RANGE · ${rangeText}`;
+        const namespace = 'http://www.w3.org/2000/svg';
+        const width = 760;
+        const height = 245;
+        const plot = {left: 48, right: 18, top: 18, bottom: 38};
+        const plotWidth = width - plot.left - plot.right;
+        const plotHeight = height - plot.top - plot.bottom;
+        const maxValue = Math.max(1, ...rows.flatMap((item) => [Number(item.pv || 0), Number(item.uv || 0)]));
+        const make = (tag, attrs = {}, text = '') => {
+          const element = document.createElementNS(namespace, tag);
+          Object.entries(attrs).forEach(([key, value]) => element.setAttribute(key, String(value)));
+          if (text) element.textContent = text;
+          pvUvChart.appendChild(element);
+          return element;
+        };
+        for (let index = 0; index <= 4; index += 1) {
+          const y = plot.top + (plotHeight * index / 4);
+          make('line', {x1: plot.left, x2: width - plot.right, y1: y, y2: y, class: 'chart-grid'});
+          make('text', {x: plot.left - 8, y: y + 3, 'text-anchor': 'end', class: 'chart-label'}, Math.round(maxValue * (1 - index / 4)).toLocaleString());
+        }
+        const groupWidth = plotWidth / rows.length;
+        const barWidth = Math.min(28, groupWidth * .28);
+        rows.forEach((item, index) => {
+          const center = plot.left + groupWidth * index + groupWidth / 2;
+          const pvHeight = Number(item.pv || 0) / maxValue * plotHeight;
+          const uvHeight = Number(item.uv || 0) / maxValue * plotHeight;
+          make('rect', {x: center - barWidth - 2, y: plot.top + plotHeight - pvHeight, width: barWidth, height: pvHeight, class: 'chart-pv'});
+          make('rect', {x: center + 2, y: plot.top + plotHeight - uvHeight, width: barWidth, height: uvHeight, class: 'chart-uv'});
+          const label = String(item.event_date || '');
+          make('text', {x: center, y: height - 13, 'text-anchor': 'middle', class: 'chart-label'}, label.length === 8 ? `${label.slice(4, 6)}-${label.slice(6, 8)}` : label);
+          const row = document.createElement('tr');
+          [label, Number(item.pv || 0).toLocaleString(), Number(item.uv || 0).toLocaleString()].forEach((value) => {
+            const cell = document.createElement('td');
+            cell.textContent = value;
+            row.appendChild(cell);
+          });
+          analyticsRows.appendChild(row);
+        });
+      }
+
+      question.addEventListener('input', () => {
+        const cleaned = question.value.replace(/\s+/gu, '');
+        if (cleaned !== question.value) {
+          const cursorPosition = question.selectionStart;
+          const removedBeforeCursor = (question.value.slice(0, cursorPosition).match(/\s/gu) || []).length;
+          question.value = cleaned;
+          question.setSelectionRange(cursorPosition - removedBeforeCursor, cursorPosition - removedBeforeCursor);
+        }
+        if (estimateToken) {
+          resetEstimate();
+          setResult('输入已修改，原费用凭证已失效。');
+        }
+      });
+
+      function handleDateChange() {
+        const range = updateDateRangeLabel();
+        analyticsPanel.hidden = true;
+        resetEstimate(range ? `日期范围已改为 ${range.start} — ${range.end}，请重新执行费用评估。` : '日期范围无效，请重新选择。');
+        setResult(range ? '日期范围已修改，原费用凭证已失效。' : '日期范围无效：仅支持昨天及以前、最长7天。', range ? 'idle' : 'error');
+      }
+      queryDateRange.addEventListener('rangechange', handleDateChange);
+
+      quotaClose.addEventListener('click', () => { quotaModal.hidden = true; submitButton.focus(); });
+      quotaModal.addEventListener('click', (event) => { if (event.target === quotaModal) quotaModal.hidden = true; });
+
+      estimateButton.addEventListener('click', async () => {
+        const value = question.value.replace(/\s+/gu, '');
+        let range;
+        if (!value) {
+          setReceipt('error', '缺少查询内容', 'INPUT_REQUIRED', '请先输入包含事件编码的查询问题。');
+          updateLog(logParse, 'error', '未检测到可解析内容', 'STOP');
+          setResult('请输入需要查询的 CID。', 'error');
+          question.focus();
+          return;
+        }
+        try { range = selectedDateRange(); }
+        catch (error) {
+          setReceipt('error', '日期无效', 'DATE_RANGE', error.message);
+          updateLog(logPartition, 'error', error.message, 'STOP');
+          setResult(error.message, 'error');
+          return;
+        }
+
+        resetEstimate('正在调用 ODPS COST SQL；此阶段不会执行真实查询。');
+        estimateButton.disabled = true;
+        estimateButton.textContent = '评估中…';
+        setReceipt('idle', '正在评估', 'RUNNING', '正在计算扫描量与 SQL 复杂度，请稍候。');
+        updateLog(logParse, 'active', '正在抽取事件编码', 'RUN');
+        updateLog(logPartition, 'active', `正在生成 ${range.start} — ${range.end} 分区`, 'RUN');
+        updateLog(logCost, 'active', '正在请求 ODPS COST SQL', 'RUN');
+        setResult('正在进行资源评估，尚未创建真实查询任务。');
+
+        try {
+          const response = await fetch('/api/v1/query-estimates', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({question: value, start_date: range.start, end_date: range.end})
+          });
+          const payload = await readPayload(response);
+          if (response.status === 401) {
+            showLogin('登录已过期，请重新登录。');
+            throw new Error('登录已过期。');
+          }
+          if (!response.ok) throw new Error(payload.detail || '费用评估失败。');
+
+          estimateToken = payload.estimate_token;
+          estimatedQuestion = value;
+          estimatedStartDate = range.start;
+          estimatedEndDate = range.end;
+          estimateExpiresAt = Date.parse(payload.expires_at);
+          submitButton.disabled = false;
+          gate.dataset.open = 'true';
+          gate.textContent = '◆';
+          gateCopy.textContent = '费用评估已通过，可以导出';
+
+          const meter = Math.min(100, Math.max(6, Math.log10(payload.input_size_bytes + 1) * 8));
+          scanProgress.style.setProperty('--progress', `${meter}%`);
+          receiptId.textContent = `NO. ${String(Date.now()).slice(-6)}`;
+          eventCode.textContent = payload.event_code;
+          partitions.textContent = `${payload.partition_start} — ${payload.partition_end}`;
+          scanSize.textContent = formatBytes(payload.input_size_bytes);
+          complexity.textContent = Number(payload.complexity).toFixed(2);
+          udfCount.textContent = String(payload.udf_count);
+          unitPrice.textContent = `¥${payload.price_per_gib_cny} / GiB`;
+          amount.textContent = `¥${Number(payload.estimated_amount_cny).toFixed(4)}`;
+          setReceipt('ready', '评估通过', 'PASS', '本次结果仅为费用估算，尚未读取明细数据。确认后可导出 XLSX。');
+          updateLog(logParse, 'success', `已识别 CID · ${payload.event_code}`, 'PASS');
+          updateLog(logPartition, 'success', `${payload.partition_start} — ${payload.partition_end}`, 'PASS');
+          updateLog(logCost, 'success', `预计扫描 ${formatBytes(payload.input_size_bytes)}`, 'PASS');
+          updateLog(logQuery, 'success', '费用凭证有效，查询门禁已解锁', 'READY');
+          setResult('费用评估完成，尚未执行明细 SQL。请审阅右侧回执后导出数据。', 'ready');
+        } catch (error) {
+          const failure = classifyError(error, 'estimate');
+          resetEstimate(failure.message);
+          setReceipt('error', '评估失败', failure.code, failure.message);
+          updateLog(logCost, 'error', failure.message, 'FAIL');
+          setResult(`${failure.code} · ${failure.message}`, 'error');
+        } finally {
+          estimateButton.disabled = false;
+          estimateButton.textContent = '开始评估';
+        }
+      });
+
+      submitButton.addEventListener('click', async () => {
+        const value = question.value.replace(/\s+/gu, '');
+        let range;
+        try { range = selectedDateRange(); }
+        catch (error) { setResult(error.message, 'error'); return; }
+        if (!estimateToken || value !== estimatedQuestion || range.start !== estimatedStartDate || range.end !== estimatedEndDate || Date.now() >= estimateExpiresAt) {
+          resetEstimate('费用凭证已失效，请重新评估后再提交。');
+          setResult('ESTIMATE_EXPIRED · 请重新执行费用评估。', 'error');
+          return;
+        }
+
+        submitButton.disabled = true;
+        estimateButton.disabled = true;
+        submitButton.textContent = '导出中…';
+        setReceipt('idle', '正在提交', 'QUERY_START', '正在创建真实 ODPS 查询任务。');
+        updateLog(logQuery, 'active', '正在创建真实查询任务', 'RUN');
+        setResult('正在创建真实查询任务…');
+
+        try {
+          const response = await fetch('/api/v1/query-requests', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({question: value, start_date: range.start, end_date: range.end, estimate_token: estimateToken})
+          });
+          const payload = await readPayload(response);
+          if (response.status === 401) {
+            showLogin('登录已过期，请重新登录。');
+            throw new Error('登录已过期。');
+          }
+          if (response.status === 429) {
+            quotaModal.hidden = false;
+            quotaClose.focus();
+            throw new Error(payload.detail || '超过今天查询余额上限，请联系yzr');
+          }
+          if (!response.ok) throw new Error(payload.detail || '提交失败。');
+          setReceipt('ready', '任务已提交', 'QUEUED', `任务 ${payload.id} 已进入执行队列。`);
+          updateLog(logQuery, 'active', `任务 ${payload.id} 正在等待 ODPS`, 'QUEUED');
+
+          const poll = async () => {
+            try {
+              const pollResponse = await fetch(`/api/v1/jobs/${payload.id}`);
+              const current = await readPayload(pollResponse);
+              if (pollResponse.status === 401) {
+                showLogin('登录已过期，请重新登录。');
+                throw new Error('登录已过期。');
+              }
+              if (!pollResponse.ok) throw new Error(current.detail || '任务状态读取失败。');
+              if (current.status === 'succeeded') {
+                setResult(`CID ${current.event_code} 查询完成，共 ${current.detail_row_count ?? 0} 行。`, 'ready');
+                const link = document.createElement('a');
+                link.href = `/api/v1/jobs/${current.id}/download`;
+                link.textContent = ' 下载 XLSX';
+                link.download = '';
+                result.appendChild(link);
+                setReceipt('ready', '查询完成', 'COMPLETE', '明细数据和聚合统计工作表已生成。');
+                updateLog(logQuery, 'success', `结果文件已生成 · ${current.detail_row_count ?? 0} 行`, 'DONE');
+                renderAnalytics(current.aggregation, `${partitions.textContent}`);
+                window.setTimeout(() => { window.location.href = link.href; }, 250);
+              } else if (current.status === 'failed') {
+                const message = current.error_message || '请联系管理员。';
+                setResult(`QUERY_FAILED · ${message}`, 'error');
+                setReceipt('error', '查询失败', 'QUERY_FAILED', message);
+                updateLog(logQuery, 'error', message, 'FAIL');
+              } else {
+                setResult(`任务状态：${current.status}，正在处理…`);
+                updateLog(logQuery, 'active', `ODPS 任务状态 · ${current.status}`, 'RUN');
+                window.setTimeout(poll, 3000);
+              }
+            } catch (error) {
+              const failure = classifyError(error, 'query');
+              setResult(`${failure.code} · ${failure.message}`, 'error');
+              setReceipt('error', '状态读取失败', failure.code, failure.message);
+              updateLog(logQuery, 'error', failure.message, 'FAIL');
+            }
+          };
+          poll();
+        } catch (error) {
+          const failure = classifyError(error, 'query');
+          resetEstimate('未能创建查询任务，请重新评估后再试。');
+          setReceipt('error', '提交失败', failure.code, failure.message);
+          updateLog(logQuery, 'error', failure.message, 'FAIL');
+          setResult(`${failure.code} · ${failure.message}`, 'error');
+        } finally {
+          estimateButton.disabled = false;
+          submitButton.textContent = '导出 XLSX';
+        }
+      });
+
+      initializeDateRange();
+      initializeAuth();
+    </script>
+  </body>
+</html>

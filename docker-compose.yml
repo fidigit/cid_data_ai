@@ -1,0 +1,51 @@
+services:
+  api:
+    build: .
+    env_file: .env
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+    ports:
+      - "8000:8000"
+    volumes:
+      - artifacts:/app/artifacts
+      # 生产环境请把经审核的 artifact-tool node_modules 烘焙进镜像，勿依赖宿主机目录。
+      - ${SPREADSHEET_NODE_MODULES_HOST_PATH:-./node_modules}:/app/node_modules:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+
+  worker:
+    build: .
+    env_file: .env
+    command: celery -A app.workers.celery_app.celery_app worker --loglevel=INFO
+    volumes:
+      - artifacts:/app/artifacts
+      - ${SPREADSHEET_NODE_MODULES_HOST_PATH:-./node_modules}:/app/node_modules:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: event_export
+      POSTGRES_USER: event_export
+      POSTGRES_PASSWORD: change-me-before-production
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U event_export -d event_export"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+
+volumes:
+  artifacts:
+  postgres_data:
+

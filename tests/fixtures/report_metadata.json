@@ -1,0 +1,9 @@
+{
+  "event_code": "10001_0001",
+  "partition_start": "20260805",
+  "partition_end": "20260811",
+  "aggregation": [
+    {"event_date": "20260805", "pv": 2, "uv": 1},
+    {"event_date": "20260806", "pv": 1, "uv": 1}
+  ]
+}
