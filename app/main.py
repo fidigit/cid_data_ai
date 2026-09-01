@@ -23,7 +23,7 @@ async def lifespan(_: FastAPI):
 
 
 def create_app() -> FastAPI:
-    app = FastAPI(title="埋点数据自助拉取工具", version="0.0.2", lifespan=lifespan)
+    app = FastAPI(title="埋点数据自助拉取工具", version="0.0.3", lifespan=lifespan)
     app.include_router(auth_router)
     app.include_router(usage_router)
     app.include_router(router)

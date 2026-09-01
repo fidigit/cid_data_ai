@@ -68,7 +68,6 @@ def execute_query_job(self, job_id: str) -> None:
                 detail_columns=detail_stream.columns,
                 detail_rows=detail_stream.rows,
                 max_rows=settings.max_export_rows,
-                node_bin=settings.spreadsheet_node_bin,
             )
             mark_succeeded(
                 db,

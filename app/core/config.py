@@ -43,8 +43,6 @@ class Settings(BaseSettings):
     cost_estimate_token_ttl_seconds: int = 600
     cost_estimate_price_per_gib_cny: float = 0.30
 
-    spreadsheet_node_bin: str = "node"
-
     wecom_mode: str = "disabled"
     wecom_corp_id: str = ""
     wecom_agent_id: str = ""

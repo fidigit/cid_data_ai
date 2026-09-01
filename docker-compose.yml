@@ -7,8 +7,6 @@ services:
       - "8000:8000"
     volumes:
       - artifacts:/app/artifacts
-      # 生产环境请把经审核的 artifact-tool node_modules 烘焙进镜像，勿依赖宿主机目录。
-      - ${SPREADSHEET_NODE_MODULES_HOST_PATH:-./node_modules}:/app/node_modules:ro
     depends_on:
       postgres:
         condition: service_healthy
@@ -21,7 +19,6 @@ services:
     command: celery -A app.workers.celery_app.celery_app worker --loglevel=INFO
     volumes:
       - artifacts:/app/artifacts
-      - ${SPREADSHEET_NODE_MODULES_HOST_PATH:-./node_modules}:/app/node_modules:ro
     depends_on:
       postgres:
         condition: service_healthy
@@ -48,4 +45,3 @@ services:
 volumes:
   artifacts:
   postgres_data:
-

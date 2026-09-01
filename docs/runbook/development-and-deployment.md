@@ -9,18 +9,43 @@
 
 ## 2. xlsx 运行时
 
-项目使用 `@oai/artifact-tool` 生成工作簿。发布镜像必须包含 Node.js 和经组织审核的该包，且运行时能从 `/app/scripts/build_report.mjs` 解析到 `/app/node_modules/@oai/artifact-tool`。本机验证可将工作区的 `node_modules` 指向受管运行时依赖目录；不要将该依赖目录复制或提交到仓库。
+项目使用公开的 Python `XlsxWriter` 生成工作簿，并启用 `constant_memory` 按行流式写入明细。API 与 Worker 不再依赖 Node.js、Codex 运行时或私有 npm 包。`XlsxWriter` 已声明在 `pyproject.toml`，执行常规 Python 安装即可获得完整导出能力。
 
 在本机执行：
 
 ```powershell
-$env:SPREADSHEET_NODE_BIN = 'C:\\Users\\JOYY\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe'
-pytest -q
+.\.venv\Scripts\python.exe -m pip install -e .
+.\.venv\Scripts\python.exe -m pytest -q
 ```
+
+Linux 或 macOS 使用：
+
+```bash
+./.venv/bin/python -m pip install -e .
+./.venv/bin/python -m pytest -q
+```
+
+### Windows 现有部署升级（保留账号与密码）
+
+账号、密码哈希和使用统计位于被 Git 忽略的 `data/app.db`，真实配置位于被 Git 忽略的 `.env`。升级前停止服务并做时间戳备份，然后只快进更新已跟踪代码：
+
+```powershell
+$stamp = Get-Date -Format "yyyyMMdd-HHmmss"
+Copy-Item .env ".env.backup-$stamp"
+Copy-Item data\app.db "data\app.db.backup-$stamp"
+git status --short
+git fetch origin --tags
+git switch main
+git pull --ff-only origin main
+.\.venv\Scripts\python.exe -m pip install -e .
+.\.venv\Scripts\python.exe .\scripts\manage_users.py list
+```
+
+如果 `git status --short` 显示 `.env` 或 `data/app.db`，说明本机 `.gitignore` 状态异常，应停止升级并先排查；正常情况下它们不会出现在输出中，也不会被 `git pull` 覆盖。
 
 ## 3. 发布流程
 
-1. 在 CI 跑 `pytest -q`，并用脱敏 fixture 生成一份 xlsx，使用 `scripts/verify_report.mjs` 检查两个 Sheet、汇总值、公式错误和渲染预览。
+1. 在 CI 跑 `pytest -q`；`tests/test_report_builder.py` 会用脱敏数据生成 XLSX，并检查两个 Sheet、明细文本安全、PV/UV 汇总值、公式以及超限时不发布半成品文件。
 2. 构建 API/Worker 同一版本镜像，在预发布环境运行迁移、健康检查和一个测试 CID。
 3. Nginx 配置 HTTPS、访问日志、请求大小/超时限制；仅信任自身写入的身份与真实 IP 头。
 4. 部署至少两个 API 副本；Worker 根据队列深度水平扩容。PostgreSQL、Redis、OSS 使用托管服务和备份策略。
@@ -44,4 +69,3 @@ pytest -q
 - [ ] xlsx 有 `原始数据` 与 `聚合统计`，统计表按日期显示 PV/UV 并有总计。
 - [ ] 回调验签、SSO、RBAC、私有 OSS、生命周期和审计下载均已启用。
 - [ ] 统计后台可按日期、渠道、账号、IP、CID、任务状态查看请求/下载次数。
-
