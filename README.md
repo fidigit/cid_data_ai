@@ -4,7 +4,15 @@
 
 ![埋点数据查询终端效果图](docs/images/product-preview-v0.0.2.png)
 
-当前发布版本：`v0.0.3`
+当前发布版本：`v0.0.4`。
+
+v0.0.4 新增 WEB 日志：在输入框上方选择“WEB端”，输入8位 eventid（例如70081134）。复用现有 ODPS 项目、账号及日期配置；该账号需有 `yy_websdkprotocol_original` 读取权限，dt 分区格式需与现有日期配置一致。一次查询一个事件，默认昨天，最多7天，不含今天。
+
+客户端 SQL 保持原模板，WEB 模板位于 `sql/web_event_detail.sql`。导出包含“原始数据”和“聚合统计”，WEB 明细为 uid/time/act_type/eventid/dt，每日统计按 dt、eventid 计算 COUNT(1) 和 COUNT(DISTINCT uid)。UV 每日合计不是区间去重人数。
+
+两端费用评估均分别调用两条实际执行 SQL 的 execute_sql_cost，扫描量合计后按配置单价折算；复杂度展示两条中的最大值。金额是内部估算，不是阿里云实际账单。估价凭证绑定端类型、账号、事件和日期，切换类型或更新旧版凭证后需重新评估。
+
+升级前停止 API/Worker，备份 `.env` 和数据库；安装依赖后启动 API，会自动给旧任务上下文增加 log_type 字段并默认 client，保留账号、密码哈希和历史统计，再启动 Worker。两端共用原每日预算。
 
 ## 当前状态
 

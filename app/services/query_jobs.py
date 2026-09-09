@@ -31,6 +31,7 @@ def create_job(
     partition_end: str,
     days: int,
     estimated_amount_cny: float,
+    log_type: str = "client",
 ) -> QueryJob:
     job = QueryJob(
         source=source,
@@ -44,6 +45,7 @@ def create_job(
     db.flush()
     db.add(
         QueryJobContext(
+            log_type=log_type,
             job_id=job.id,
             partition_start=partition_start,
             partition_end=partition_end,

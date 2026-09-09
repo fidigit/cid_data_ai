@@ -56,7 +56,6 @@ class Settings(BaseSettings):
             "ODPS_ACCESS_KEY_SECRET": self.odps_access_key_secret,
             "ODPS_PROJECT": self.odps_project,
             "ODPS_ENDPOINT": self.odps_endpoint,
-            "DATA_SOURCE_TABLE": self.data_source_table,
         }
         missing = [name for name, value in required.items() if not value]
         if missing:

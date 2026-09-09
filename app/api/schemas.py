@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import date, datetime
+from typing import Literal
 
 from pydantic import BaseModel, Field
 
@@ -8,6 +9,7 @@ from app.models import JobStatus
 
 
 class QueryRequest(BaseModel):
+    log_type: Literal["client", "web"] = "client"
     question: str = Field(min_length=1, max_length=1000)
     start_date: date | None = None
     end_date: date | None = None
@@ -16,6 +18,7 @@ class QueryRequest(BaseModel):
 
 
 class QueryEstimateRequest(BaseModel):
+    log_type: Literal["client", "web"] = "client"
     question: str = Field(min_length=1, max_length=1000)
     start_date: date | None = None
     end_date: date | None = None
@@ -23,6 +26,7 @@ class QueryEstimateRequest(BaseModel):
 
 
 class QueryEstimateResponse(BaseModel):
+    log_type: Literal["client", "web"] = "client"
     event_code: str
     days: int
     partition_start: str
@@ -38,6 +42,7 @@ class QueryEstimateResponse(BaseModel):
 
 
 class JobResponse(BaseModel):
+    log_type: Literal["client", "web"] = "client"
     id: str
     status: JobStatus
     event_code: str

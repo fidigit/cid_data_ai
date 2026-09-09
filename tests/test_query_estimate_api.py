@@ -20,7 +20,7 @@ class FakeOdpsClient:
 
 def test_estimate_is_required_before_real_query(monkeypatch) -> None:
     monkeypatch.setattr(OdpsGateway, "_client", lambda self: FakeOdpsClient())
-    app.dependency_overrides[get_db] = lambda: object()
+    app.dependency_overrides[get_db] = lambda: SimpleNamespace(get=lambda *args: None)
     app.dependency_overrides[get_current_user] = lambda: SessionPrincipal(
         user_id=1,
         username="user-1",
@@ -51,9 +51,9 @@ def test_estimate_is_required_before_real_query(monkeypatch) -> None:
             )
             assert estimate_response.status_code == 200
             estimate = estimate_response.json()
-            assert estimate["input_size_bytes"] == 5 * 1024**3
-            assert estimate["input_size_gib"] == 5
-            assert estimate["estimated_amount_cny"] == 1.5
+            assert estimate["input_size_bytes"] == 10 * 1024**3
+            assert estimate["input_size_gib"] == 10
+            assert estimate["estimated_amount_cny"] == 3.0
 
             rejected = client.post(
                 "/api/v1/query-requests",

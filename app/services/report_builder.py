@@ -85,6 +85,7 @@ def _write_aggregation_sheet(
     partition_start: str,
     partition_end: str,
     aggregation: list[dict[str, Any]],
+    log_type: str = "client",
 ) -> None:
     worksheet = workbook.add_worksheet("聚合统计")
     worksheet.hide_gridlines(2)
@@ -132,7 +133,8 @@ def _write_aggregation_sheet(
     )
 
     worksheet.set_row(0, 26)
-    title = f"CID {event_code} 近 {_day_count(partition_start, partition_end)} 天聚合统计"
+    label = "WEB eventid" if log_type == "web" else "CID"
+    title = f"{label} {event_code} 近 {_day_count(partition_start, partition_end)} 天聚合统计"
     worksheet.write(0, 0, title, title_format)
     worksheet.write_blank(0, 1, None, title_format)
     worksheet.write_blank(0, 2, None, title_format)
@@ -141,6 +143,9 @@ def _write_aggregation_sheet(
     worksheet.write_blank(1, 2, None, subtitle_format)
     worksheet.set_row(3, 22)
     worksheet.write_row(3, 0, ["日期", "PV", "UV"], header_format)
+    if log_type == "web":
+        worksheet.set_column("D:D", 18)
+        worksheet.write(3, 3, "eventid", header_format)
 
     total_pv = 0
     total_uv = 0
@@ -153,11 +158,13 @@ def _write_aggregation_sheet(
         worksheet.write(row_index, 0, str(item.get("event_date") or ""))
         worksheet.write_number(row_index, 1, pv, count_format)
         worksheet.write_number(row_index, 2, uv, count_format)
+        if log_type == "web":
+            worksheet.write_string(row_index, 3, event_code)
 
     if aggregation:
         total_row = 4 + len(aggregation)
         last_data_excel_row = 4 + len(aggregation)
-        worksheet.write(total_row, 0, "总计", total_label_format)
+        worksheet.write(total_row, 0, "每日合计", total_label_format)
         worksheet.write_formula(
             total_row,
             1,
@@ -172,6 +179,7 @@ def _write_aggregation_sheet(
             total_count_format,
             total_uv,
         )
+        worksheet.write(total_row + 2, 0, "UV合计为每日UV之和，非区间去重人数。")
 
 
 def build_xlsx(
@@ -184,6 +192,7 @@ def build_xlsx(
     detail_columns: tuple[str, ...],
     detail_rows: Iterable[tuple[Any, ...]],
     max_rows: int,
+    log_type: str = "client",
 ) -> int:
     """使用 XlsxWriter 流式生成可跨平台部署的双 Sheet 工作簿。"""
     destination.parent.mkdir(parents=True, exist_ok=True)
@@ -202,7 +211,7 @@ def build_xlsx(
             workbook.use_zip64()
             workbook.set_properties(
                 {
-                    "title": f"CID {event_code} 数据导出",
+                    "title": f"{log_type} {event_code} 数据导出",
                     "subject": f"{partition_start} 至 {partition_end} 埋点明细与聚合统计",
                     "author": "CID Data AI",
                 }
@@ -219,6 +228,7 @@ def build_xlsx(
                 partition_start=partition_start,
                 partition_end=partition_end,
                 aggregation=aggregation,
+                log_type=log_type,
             )
         temporary_output.replace(destination)
     return row_count

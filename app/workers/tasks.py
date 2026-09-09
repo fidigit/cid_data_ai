@@ -1,12 +1,10 @@
 from __future__ import annotations
 
-from pathlib import Path
-
 from app.core.config import get_settings
 from app.database import SessionLocal
 from app.domain.partitions import PartitionRange
 from app.infrastructure.odps_gateway import OdpsGateway
-from app.infrastructure.sql_renderer import EventQueryRenderer
+from app.services.query_plan import build_query_plan
 from app.models import JobStatus, QueryJob, QueryJobContext
 from app.services.query_jobs import (
     mark_failed,
@@ -34,16 +32,7 @@ def execute_query_job(self, job_id: str) -> None:
         if context is None:
             raise RuntimeError("查询任务缺少分区上下文。")
         partitions = PartitionRange(start=context.partition_start, end=context.partition_end)
-        renderer = EventQueryRenderer(Path("sql/event_detail.sql"))
-        detail_sql = renderer.render_detail(
-            source_table=settings.data_source_table,
-            partition_column=settings.data_partition_column,
-            event_code_column=settings.data_event_code_column,
-            user_id_column=settings.data_user_id_column,
-            event_code=job.event_code,
-            partitions=partitions,
-        )
-        aggregation_sql = renderer.render_daily_aggregation(detail_sql)
+        detail_sql, aggregation_sql = build_query_plan(settings, job.event_code, partitions, context.log_type)
         odps = OdpsGateway(settings)
 
         with odps.open_rows(aggregation_sql) as aggregate_stream:
@@ -56,7 +45,7 @@ def execute_query_job(self, job_id: str) -> None:
         artifact_path = (
             settings.artifacts_dir
             / job.id
-            / f"{job.event_code}_{partitions.start}_{partitions.end}.xlsx"
+            / f"{context.log_type}_{job.event_code}_{partitions.start}_{partitions.end}.xlsx"
         )
         with odps.open_rows(detail_sql) as detail_stream:
             row_count = build_xlsx(
@@ -68,6 +57,7 @@ def execute_query_job(self, job_id: str) -> None:
                 detail_columns=detail_stream.columns,
                 detail_rows=detail_stream.rows,
                 max_rows=settings.max_export_rows,
+                log_type=context.log_type,
             )
             mark_succeeded(
                 db,

@@ -1272,7 +1272,14 @@
         *, *::before, *::after { animation: none !important; transition: none !important; }
       }
 
-    </style>
+    .log-type-control {display:flex; align-items:center; flex-wrap:wrap; gap:16px; margin:0 0 24px;}
+    .log-type-options {display:flex; gap:6px;}
+    .log-type-options button {min-width:112px; padding:9px 24px; border:1px solid #365547; border-radius:3px; background:transparent; color:#b6c8be; cursor:pointer; font:inherit;}
+    .log-type-options button[aria-pressed="true"] {background:#9bf2ca; color:#082017; border-color:#9bf2ca;}
+    .log-type-options button:focus-visible {outline:2px solid #9bf2ca; outline-offset:3px;}
+    .log-type-options button:disabled {opacity:.6; cursor:wait;}
+    @media(max-width:480px) {.log-type-options button {min-width:96px; padding:9px 16px;}}
+  </style>
   </head>
   <body>
     <section class="auth-screen" id="authScreen">
@@ -1295,6 +1302,7 @@
         <div class="brand">
           <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
           MAXCOMPUTE EVENT INTELLIGENCE
+          <small style="font-weight:normal; opacity:.7">v0.0.4</small>
         </div>
         <div class="topbar-spacer"></div>
         <span class="status-chip">ENV · PROD</span>
@@ -1333,6 +1341,13 @@
           <section class="workspace">
             <section class="console" aria-labelledby="consoleTitle">
               <div class="terminal-body">
+                <div class="log-type-control" role="group" aria-label="日志类型">
+                  <span class="prompt-label">日志类型</span>
+                  <div class="log-type-options">
+                    <button type="button" data-log-type="client" aria-pressed="true">客户端</button>
+                    <button type="button" data-log-type="web" aria-pressed="false">WEB端</button>
+                  </div>
+                </div>
                 <div class="field-heading">
                   <div>
                     <label class="prompt-label" id="consoleTitle" for="question">输入查询指令 <span class="required-tag">必填</span></label>
@@ -1364,7 +1379,7 @@
                   <aside class="stage-side">
                     <section class="guide-card" aria-label="查询指令帮助">
                       <span class="guide-icon" aria-hidden="true">&gt;_</span>
-                      <div><strong>如何编写查询指令？</strong><ul><li>支持自然语言描述</li><li>明确填写埋点编码</li><li>一次只查询一个 CID</li></ul></div>
+                      <div><strong id="queryHelpTitle">如何编写查询指令？</strong><ul><li id="queryHelpCode">明确填写埋点编码</li><li id="queryHelpExample">例如：90056_0001</li><li>一次只查询一个事件</li></ul></div>
                     </section>
 
                     <section class="receipt" id="receipt" data-state="idle" aria-labelledby="receiptTitle">
@@ -1374,8 +1389,8 @@
                         <dl class="metrics">
                           <div class="metric"><dt>事件编码</dt><dd id="eventCode">—</dd></div>
                           <div class="metric"><dt>查询分区</dt><dd id="partitions">等待选择日期</dd></div>
-                          <div class="metric"><dt>预计扫描</dt><dd id="scanSize">—</dd></div>
-                          <div class="metric"><dt>SQL 复杂度</dt><dd id="complexity">—</dd></div>
+                          <div class="metric"><dt>合计预计扫描</dt><dd id="scanSize">—</dd></div>
+                          <div class="metric"><dt>最高 SQL 复杂度</dt><dd id="complexity">—</dd></div>
                           <div class="metric"><dt>UDF 数量</dt><dd id="udfCount">—</dd></div>
                           <div class="metric"><dt>参考单价</dt><dd id="unitPrice">—</dd></div>
                         </dl>
@@ -1406,7 +1421,7 @@
             </div>
           </section>
 
-          <div class="result-panel" id="result" data-state="idle" aria-live="polite">输入 CID 并选择日期后，即可开始费用评估。</div>
+          <div class="result-panel" id="result" data-state="idle" aria-live="polite">输入事件编码并选择日期后，即可开始费用评估。</div>
         </div>
       </section>
 
@@ -1474,6 +1489,32 @@
       const recentQueries = $('#recentQueries');
 
       let estimateToken = null;
+      let logType = 'client';
+      let estimatedLogType = null;
+      let inputRevision = 0;
+      let queryInFlight = false;
+      const logTypeButtons = [...document.querySelectorAll('[data-log-type]')];
+      const typeLabel = (type) => type === 'web' ? 'WEB端' : '客户端';
+      function setQueryLocked(locked) {
+        queryInFlight = locked;
+        logTypeButtons.forEach(button => { button.disabled = locked; });
+        question.readOnly = locked;
+        queryDateRange.inert = locked;
+        recentQueries.inert = locked;
+        estimateButton.disabled = locked;
+      }
+      function selectLogType(type) {
+        logType = type === 'web' ? 'web' : 'client';
+        logTypeButtons.forEach(button => button.setAttribute('aria-pressed', String(button.dataset.logType === logType)));
+        $('#queryHelpTitle').textContent = logType === 'web' ? '如何查询 WEB 日志？' : '如何编写查询指令？';
+        $('#queryHelpCode').textContent = logType === 'web' ? '输入 eventid 事件编码' : '明确填写埋点编码';
+        $('#queryHelpExample').textContent = logType === 'web' ? '例如：70081134' : '例如：90056_0001';
+        question.placeholder = logType === 'web' ? '例如：帮我查询70081134的数据' : '例如：看看90056_0001昨天的数据';
+        analyticsPanel.hidden = true;
+        resetEstimate('日志类型已切换，请重新评估。');
+        setResult(`已选择${typeLabel(logType)}，请输入事件编码并评估费用。`);
+      }
+      logTypeButtons.forEach(button => button.addEventListener('click', () => selectLogType(button.dataset.logType)));
       let estimatedQuestion = null;
       let estimatedStartDate = null;
       let estimatedEndDate = null;
@@ -1580,7 +1621,7 @@
           clock.textContent = '◷';
           const query = document.createElement('span');
           query.className = 'recent-query';
-          query.textContent = item.question;
+          query.textContent = `[${typeLabel(item.logType)}] ${item.question}`;
           const range = document.createElement('span');
           range.className = 'recent-range';
           range.textContent = `${item.start}  ~  ${item.end}`;
@@ -1589,6 +1630,7 @@
           use.type = 'button';
           use.textContent = '使用  ›';
           use.addEventListener('click', () => {
+            selectLogType(item.logType || 'client');
             question.value = item.question;
             questionCount.textContent = String(question.value.length);
             queryDateRange.setRange(item.start, item.end);
@@ -1601,15 +1643,17 @@
         });
       }
 
-      function rememberQuery(value, range) {
-        const items = readRecentQueries().filter((item) => !(item.question === value && item.start === range.start && item.end === range.end));
-        items.unshift({question: value, start: range.start, end: range.end, updatedAt: Date.now()});
+      function rememberQuery(value, range, type = logType) {
+        const items = readRecentQueries().filter((item) => !((item.logType || 'client') === type && item.question === value && item.start === range.start && item.end === range.end));
+        items.unshift({question: value, logType: type, start: range.start, end: range.end, updatedAt: Date.now()});
         try { window.localStorage.setItem(recentStorageKey, JSON.stringify(items.slice(0, 3))); }
         catch { /* 浏览器禁用本地存储时不影响查询。 */ }
         renderRecentQueries();
       }
 
       function resetEstimate(message = '输入已发生变化，请重新执行费用评估。') {
+        inputRevision += 1;
+        estimatedLogType = null;
         estimateToken = null;
         estimatedQuestion = null;
         estimatedStartDate = null;
@@ -1801,6 +1845,7 @@
       }
 
       question.addEventListener('input', () => {
+        inputRevision += 1;
         const cleaned = question.value.replace(/\s+/gu, '');
         if (cleaned !== question.value) {
           const cursorPosition = question.selectionStart;
@@ -1829,7 +1874,7 @@
         if (!value) {
           setReceipt('error', '缺少查询内容', 'INPUT_REQUIRED', '请先输入包含事件编码的查询问题。');
           updateLog(logParse, 'error', '未检测到可解析内容', 'STOP');
-          setResult('请输入需要查询的 CID。', 'error');
+          setResult('请输入需要查询的事件编码。', 'error');
           question.focus();
           return;
         }
@@ -1842,6 +1887,8 @@
         }
 
         resetEstimate('正在调用 ODPS COST SQL；此阶段不会执行真实查询。');
+        const requestRevision = inputRevision;
+        const requestLogType = logType;
         setWorkflowStage('cost');
         estimateButton.disabled = true;
         estimateButton.textContent = '评估中…';
@@ -1855,9 +1902,10 @@
           const response = await fetch('/api/v1/query-estimates', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({question: value, start_date: range.start, end_date: range.end})
+            body: JSON.stringify({question: value, log_type: requestLogType, start_date: range.start, end_date: range.end})
           });
           const payload = await readPayload(response);
+          if (requestRevision !== inputRevision) return;
           if (response.status === 401) {
             showLogin('登录已过期，请重新登录。');
             throw new Error('登录已过期。');
@@ -1865,6 +1913,7 @@
           if (!response.ok) throw new Error(payload.detail || '费用评估失败。');
 
           estimateToken = payload.estimate_token;
+          estimatedLogType = requestLogType;
           estimatedQuestion = value;
           estimatedStartDate = range.start;
           estimatedEndDate = range.end;
@@ -1877,22 +1926,23 @@
           const meter = Math.min(100, Math.max(6, Math.log10(payload.input_size_bytes + 1) * 8));
           scanProgress.style.setProperty('--progress', `${meter}%`);
           receiptId.textContent = `NO. ${String(Date.now()).slice(-6)}`;
-          eventCode.textContent = payload.event_code;
+          eventCode.textContent = `${typeLabel(payload.log_type)} · ${payload.event_code}`;
           partitions.textContent = `${payload.partition_start} — ${payload.partition_end}`;
           scanSize.textContent = formatBytes(payload.input_size_bytes);
           complexity.textContent = Number(payload.complexity).toFixed(2);
           udfCount.textContent = String(payload.udf_count);
           unitPrice.textContent = `¥${payload.price_per_gib_cny} / GiB`;
           amount.textContent = `¥${Number(payload.estimated_amount_cny).toFixed(4)}`;
-          setReceipt('ready', '评估通过', 'PASS', '本次结果仅为费用估算，尚未读取明细数据。确认后可导出 XLSX。');
+          setReceipt('ready', '评估通过', 'PASS', '预估金额包含明细与每日聚合两次查询，按配置单价计算，实际账单以阿里云为准。');
           setWorkflowStage('cost');
-          updateLog(logParse, 'success', `已识别 CID · ${payload.event_code}`, 'PASS');
+          updateLog(logParse, 'success', `${typeLabel(payload.log_type)} · ${payload.event_code}`, 'PASS');
           updateLog(logPartition, 'success', `${payload.partition_start} — ${payload.partition_end}`, 'PASS');
           updateLog(logCost, 'success', `预计扫描 ${formatBytes(payload.input_size_bytes)}`, 'PASS');
           updateLog(logQuery, 'success', '费用凭证有效，查询门禁已解锁', 'READY');
           setResult('费用评估完成，尚未执行明细 SQL。请审阅费用回执后再导出数据。', 'ready');
           rememberQuery(value, range);
         } catch (error) {
+          if (requestRevision !== inputRevision) return;
           const failure = classifyError(error, 'estimate');
           resetEstimate(failure.message);
           setWorkflowStage('cost');
@@ -1910,7 +1960,7 @@
         let range;
         try { range = selectedDateRange(); }
         catch (error) { setResult(error.message, 'error'); return; }
-        if (!estimateToken || value !== estimatedQuestion || range.start !== estimatedStartDate || range.end !== estimatedEndDate || Date.now() >= estimateExpiresAt) {
+        if (!estimateToken || logType !== estimatedLogType || value !== estimatedQuestion || range.start !== estimatedStartDate || range.end !== estimatedEndDate || Date.now() >= estimateExpiresAt) {
           resetEstimate('费用凭证已失效，请重新评估后再提交。');
           setResult('ESTIMATE_EXPIRED · 请重新执行费用评估。', 'error');
           return;
@@ -1918,6 +1968,8 @@
 
         submitButton.disabled = true;
         estimateButton.disabled = true;
+        const submittedLogType = logType;
+        setQueryLocked(true);
         submitButton.textContent = '导出中…';
         setWorkflowStage('export');
         setReceipt('running', '正在提交', 'QUERY_START', '正在创建真实 ODPS 查询任务。');
@@ -1928,7 +1980,7 @@
           const response = await fetch('/api/v1/query-requests', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({question: value, start_date: range.start, end_date: range.end, estimate_token: estimateToken})
+            body: JSON.stringify({question: value, log_type: submittedLogType, start_date: range.start, end_date: range.end, estimate_token: estimateToken})
           });
           const payload = await readPayload(response);
           if (response.status === 401) {
@@ -1952,7 +2004,8 @@
               }
               if (!pollResponse.ok) throw new Error(current.detail || '任务状态读取失败。');
               if (current.status === 'succeeded') {
-                setResult(`CID ${current.event_code} 查询完成，共 ${current.detail_row_count ?? 0} 行。`, 'ready');
+                setQueryLocked(false);
+                setResult(`${typeLabel(current.log_type)} · ${current.event_code} 查询完成，共 ${current.detail_row_count ?? 0} 行。`, 'ready');
                 const link = document.createElement('a');
                 link.href = `/api/v1/jobs/${current.id}/download`;
                 link.textContent = ' 下载 XLSX';
@@ -1961,10 +2014,11 @@
                 setReceipt('ready', '查询完成', 'COMPLETE', '明细数据和聚合统计工作表已生成。');
                 setWorkflowStage('complete');
                 updateLog(logQuery, 'success', `结果文件已生成 · ${current.detail_row_count ?? 0} 行`, 'DONE');
-                renderAnalytics(current.aggregation, `${partitions.textContent}`);
-                rememberQuery(value, range);
+                renderAnalytics(current.aggregation, `${typeLabel(current.log_type)} · ${current.event_code} · ${range.start} — ${range.end}`);
+                rememberQuery(value, range, submittedLogType);
                 window.setTimeout(() => { window.location.href = link.href; }, 250);
               } else if (current.status === 'failed') {
+                setQueryLocked(false);
                 const message = current.error_message || '请联系管理员。';
                 setResult(`QUERY_FAILED · ${message}`, 'error');
                 setReceipt('error', '查询失败', 'QUERY_FAILED', message);
@@ -1975,6 +2029,7 @@
                 window.setTimeout(poll, 3000);
               }
             } catch (error) {
+              setQueryLocked(false);
               const failure = classifyError(error, 'query');
               setResult(`${failure.code} · ${failure.message}`, 'error');
               setReceipt('error', '状态读取失败', failure.code, failure.message);
@@ -1983,6 +2038,7 @@
           };
           poll();
         } catch (error) {
+          setQueryLocked(false);
           const failure = classifyError(error, 'query');
           resetEstimate('未能创建查询任务，请重新评估后再试。');
           setWorkflowStage(failure.code === 'DAILY_LIMIT' ? 'export' : 'cost');
@@ -1990,7 +2046,7 @@
           updateLog(logQuery, 'error', failure.message, 'FAIL');
           setResult(`${failure.code} · ${failure.message}`, 'error');
         } finally {
-          estimateButton.disabled = false;
+          estimateButton.disabled = queryInFlight;
           submitButton.textContent = '导出 XLSX →';
         }
       });

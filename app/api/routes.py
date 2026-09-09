@@ -20,9 +20,10 @@ from app.core.config import Settings, get_settings
 from app.database import get_db
 from app.domain.event_codes import EventCodeExtractionError, extract_unique_event_code, normalize_question
 from app.domain.partitions import PartitionRange, calendar_date_range, latest_calendar_days
-from app.infrastructure.odps_gateway import OdpsGateway
-from app.infrastructure.sql_renderer import EventQueryRenderer, SqlTemplateError
-from app.models import JobStatus, QueryJob
+from app.infrastructure.odps_gateway import OdpsGateway, QueryCost
+from app.services.query_plan import build_query_plan
+from app.infrastructure.sql_renderer import SqlTemplateError
+from app.models import JobStatus, QueryJob, QueryJobContext
 from app.services.cost_estimates import (
     CostEstimateTokenError,
     issue_cost_estimate_token,
@@ -34,7 +35,6 @@ from app.services.task_dispatch import dispatch_query_job
 from app.services.usage_stats import DailyBudgetExceeded, record_usage_event, reserve_daily_budget
 
 router = APIRouter(prefix="/api/v1")
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 
 def _client_ip(request: Request) -> str | None:
@@ -43,6 +43,7 @@ def _client_ip(request: Request) -> str | None:
 
 
 def _job_response(db: Session, job: QueryJob) -> JobResponse:
+    context = db.get(QueryJobContext, job.id)
     aggregation = (
         [
             DailyAggregationResponse(event_date=item.event_date, pv=item.pv, uv=item.uv)
@@ -52,6 +53,7 @@ def _job_response(db: Session, job: QueryJob) -> JobResponse:
         else []
     )
     return JobResponse(
+        log_type=context.log_type if context else "client",
         id=job.id,
         status=job.status,
         event_code=job.event_code,
@@ -76,10 +78,11 @@ def _query_context(
     settings: Settings,
     start_date: date | None = None,
     end_date: date | None = None,
+    log_type: str = "client",
 ) -> tuple[str, PartitionRange, str, str, int]:
     try:
         normalized_question = normalize_question(question)
-        event_code = extract_unique_event_code(question)
+        event_code = extract_unique_event_code(question, log_type)
         today = datetime.now(ZoneInfo(settings.timezone)).date()
         if (start_date is None) != (end_date is None):
             raise ValueError("开始日期和结束日期必须同时填写。")
@@ -94,20 +97,13 @@ def _query_context(
         else:
             partitions = latest_calendar_days(today, settings.partition_date_format, days)
             resolved_days = days
-        sql = EventQueryRenderer(PROJECT_ROOT / "sql" / "event_detail.sql").render_detail(
-            source_table=settings.data_source_table,
-            partition_column=settings.data_partition_column,
-            event_code_column=settings.data_event_code_column,
-            user_id_column=settings.data_user_id_column,
-            event_code=event_code,
-            partitions=partitions,
-        )
+        sql, _ = build_query_plan(settings, event_code, partitions, log_type)
     except EventCodeExtractionError as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
-    except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except SqlTemplateError as exc:
         raise HTTPException(status_code=503, detail=f"查询模板配置错误：{exc}") from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
     return event_code, partitions, sql, normalized_question, resolved_days
 
 
@@ -125,6 +121,7 @@ def estimate_query(
         settings,
         request_body.start_date,
         request_body.end_date,
+        request_body.log_type,
     )
     record_usage_event(
         db,
@@ -133,7 +130,14 @@ def estimate_query(
         event_code=event_code,
     )
     try:
-        cost = OdpsGateway(settings).estimate_sql_cost(sql)
+        gateway = OdpsGateway(settings)
+        detail_sql, aggregation_sql = build_query_plan(settings, event_code, partitions, request_body.log_type)
+        costs = [gateway.estimate_sql_cost(statement) for statement in (detail_sql, aggregation_sql)]
+        cost = QueryCost(
+            input_size_bytes=sum(item.input_size_bytes for item in costs),
+            complexity=max(item.complexity for item in costs),
+            udf_count=sum(item.udf_count for item in costs),
+        )
     except Exception as exc:
         message = str(exc).strip()[:300] or type(exc).__name__
         raise HTTPException(status_code=502, detail=f"ODPS 费用评估失败：{message}") from exc
@@ -148,8 +152,10 @@ def estimate_query(
         partition_end=partitions.end,
         estimated_amount_cny=estimated_amount,
         ttl_seconds=settings.cost_estimate_token_ttl_seconds,
+        log_type=request_body.log_type,
     )
     return QueryEstimateResponse(
+        log_type=request_body.log_type,
         event_code=event_code,
         days=resolved_days,
         partition_start=partitions.start,
@@ -179,6 +185,7 @@ def submit_query(
         settings,
         request_body.start_date,
         request_body.end_date,
+        request_body.log_type,
     )
     try:
         claims = verify_cost_estimate_token(
@@ -188,6 +195,7 @@ def submit_query(
             event_code=event_code,
             partition_start=partitions.start,
             partition_end=partitions.end,
+            log_type=request_body.log_type,
         )
     except CostEstimateTokenError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
@@ -215,6 +223,7 @@ def submit_query(
         partition_end=partitions.end,
         days=resolved_days,
         estimated_amount_cny=claims.estimated_amount_cny,
+        log_type=request_body.log_type,
     )
     try:
         dispatch_query_job(job.id, settings)

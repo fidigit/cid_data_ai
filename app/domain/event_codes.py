@@ -18,18 +18,24 @@ def normalize_question(question: str) -> str:
     return re.sub(r"\s+", "", question)
 
 
-def find_event_codes(question: str) -> list[str]:
+WEB_EVENT_CODE_PATTERN = re.compile(r"(?<![A-Za-z0-9_-])(?P<code>\d{8})(?![A-Za-z0-9_-])")
+
+
+def find_event_codes(question: str, log_type: str = "client") -> list[str]:
     """按首次出现顺序返回去重的 CID 候选。"""
     normalized = normalize_question(question)
-    matches = list(EVENT_CODE_PATTERN.finditer(normalized))
+    pattern = WEB_EVENT_CODE_PATTERN if log_type == "web" else EVENT_CODE_PATTERN
+    matches = list(pattern.finditer(normalized))
     if not matches and normalized != question:
-        matches = list(EVENT_CODE_PATTERN.finditer(question))
+        matches = list(pattern.finditer(question))
     return list(dict.fromkeys(match.group("code") for match in matches))
 
 
-def extract_unique_event_code(question: str) -> str:
-    codes = find_event_codes(question)
+def extract_unique_event_code(question: str, log_type: str = "client") -> str:
+    codes = find_event_codes(question, log_type)
     if not codes:
+        if log_type == "web":
+            raise EventCodeExtractionError("未识别到 WEB 事件编码，请输入8位数字，例如70081134。")
         raise EventCodeExtractionError("未识别到 CID，请输入类似 90056_0001 或 140961 的事件编码。")
     if len(codes) > 1:
         joined = "、".join(codes)
@@ -37,5 +43,6 @@ def extract_unique_event_code(question: str) -> str:
     return codes[0]
 
 
-def is_valid_event_code(value: str) -> bool:
-    return EVENT_CODE_PATTERN.fullmatch(value) is not None
+def is_valid_event_code(value: str, log_type: str = "client") -> bool:
+    pattern = WEB_EVENT_CODE_PATTERN if log_type == "web" else EVENT_CODE_PATTERN
+    return pattern.fullmatch(value) is not None

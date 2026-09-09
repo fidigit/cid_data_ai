@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.engine import make_url
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
 
@@ -30,6 +30,21 @@ def init_db() -> None:
     if url.get_backend_name() == "sqlite" and url.database not in (None, "", ":memory:"):
         Path(url.database).parent.mkdir(parents=True, exist_ok=True)
     Base.metadata.create_all(bind=engine)
+    migrate_log_type(engine)
+
+
+def migrate_log_type(bind) -> None:
+    """Additive upgrade; existing jobs remain client queries."""
+    with bind.begin() as connection:
+        if connection.dialect.name == "postgresql":
+            connection.execute(text("SELECT pg_advisory_xact_lock(400004)"))
+        elif connection.dialect.name == "sqlite":
+            connection.exec_driver_sql("BEGIN IMMEDIATE")
+        columns = {c["name"] for c in inspect(connection).get_columns("query_job_contexts")}
+        if "log_type" not in columns:
+            connection.execute(text(
+                "ALTER TABLE query_job_contexts ADD COLUMN log_type VARCHAR(16) NOT NULL DEFAULT 'client'"
+            ))
 
 
 def get_db():
