@@ -8,7 +8,7 @@ from app.domain.event_codes import is_valid_event_code
 SQL_ROOT = Path(__file__).resolve().parents[2] / "sql"
 
 
-def build_query_plan(settings, event_code, partitions, log_type="client"):
+def build_query_plan(settings, event_code, partitions, log_type="client", filters=None, row_limit=None):
     if log_type not in ("client", "web"):
         raise ValueError("日志类型无效。")
     if not is_valid_event_code(event_code, log_type):
@@ -28,7 +28,16 @@ FROM tmp GROUP BY dt, eventid;"""
             partition_column=settings.data_partition_column,
             event_code_column=settings.data_event_code_column,
             user_id_column=settings.data_user_id_column,
-            event_code=event_code, partitions=partitions,
+            event_code=event_code, partitions=partitions, filters=filters,
         )
         aggregate = renderer.render_daily_aggregation(detail)
+    from app.domain.query_filters import export_limit
+    limit = export_limit(settings) if row_limit is None else max(1, min(200_000, int(row_limit)))
+    # Aggregate the complete result; limit only the returned detail rows.
+    detail = detail.rstrip().rstrip(';') + f"\nLIMIT {limit};"
     return detail, aggregate
+
+
+def plan_fingerprint(plan):
+    import hashlib
+    return hashlib.sha256("\n".join(plan).encode("utf-8")).hexdigest()

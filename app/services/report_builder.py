@@ -1,16 +1,13 @@
 from __future__ import annotations
 
 import tempfile
+from itertools import islice
 from collections.abc import Iterable
 from datetime import date, datetime
 from pathlib import Path
 from typing import Any
 
 import xlsxwriter
-
-
-class ExportLimitExceeded(RuntimeError):
-    pass
 
 
 def _excel_safe(value: Any) -> Any:
@@ -58,12 +55,8 @@ def _write_detail_sheet(
 
     widths = [max(12, len(str(column_name)) + 2) for column_name in columns]
     count = 0
-    for row in rows:
+    for row in islice(rows, max_rows):
         count += 1
-        if count > max_rows:
-            raise ExportLimitExceeded(
-                f"明细结果超过当前导出上限 {max_rows:,} 行；未生成不完整文件。"
-            )
         if len(row) != len(columns):
             raise RuntimeError("ODPS 明细列数与表头列数不一致，已停止生成 XLSX。")
         for column_index, value in enumerate(row):
@@ -86,8 +79,11 @@ def _write_aggregation_sheet(
     partition_end: str,
     aggregation: list[dict[str, Any]],
     log_type: str = "client",
+    filters: dict | None = None,
+    max_rows: int = 200000,
 ) -> None:
     worksheet = workbook.add_worksheet("聚合统计")
+    worksheet.activate()
     worksheet.hide_gridlines(2)
     worksheet.freeze_panes(4, 0)
     worksheet.set_column("A:A", 18)
@@ -180,6 +176,19 @@ def _write_aggregation_sheet(
             total_uv,
         )
         worksheet.write(total_row + 2, 0, "UV合计为每日UV之和，非区间去重人数。")
+    note_row = 8 + len(aggregation)
+    total_rows = sum(int(item.get("pv") or 0) for item in aggregation)
+    if total_rows > max_rows:
+        cap = "20w" if max_rows == 200000 else f"{max_rows:,}"
+        worksheet.write(note_row, 0, f"只显示前{cap}条数据；聚合统计为符合筛选条件的全部数据。返回顺序不保证。")
+    else:
+        worksheet.write(note_row, 0, f"聚合统计覆盖全部匹配数据；明细最多返回 {max_rows:,} 条，返回顺序不保证。")
+    if log_type == "client":
+        from app.domain.query_filters import effective_filters
+        selected = effective_filters(filters)
+        worksheet.write(note_row + 1, 0, "sys：" + (", ".join(selected.systems) or "不限"))
+        worksheet.write(note_row + 2, 0, "ver：" + (", ".join(selected.versions) or "不限"))
+        worksheet.write(note_row + 3, 0, "返回字段：" + (", ".join(selected.value_fields) or "仅基础字段"))
 
 
 def build_xlsx(
@@ -193,6 +202,7 @@ def build_xlsx(
     detail_rows: Iterable[tuple[Any, ...]],
     max_rows: int,
     log_type: str = "client",
+    filters: dict | None = None,
 ) -> int:
     """使用 XlsxWriter 流式生成可跨平台部署的双 Sheet 工作簿。"""
     destination.parent.mkdir(parents=True, exist_ok=True)
@@ -216,12 +226,6 @@ def build_xlsx(
                     "author": "CID Data AI",
                 }
             )
-            row_count = _write_detail_sheet(
-                workbook,
-                columns=detail_columns,
-                rows=detail_rows,
-                max_rows=max_rows,
-            )
             _write_aggregation_sheet(
                 workbook,
                 event_code=event_code,
@@ -229,6 +233,14 @@ def build_xlsx(
                 partition_end=partition_end,
                 aggregation=aggregation,
                 log_type=log_type,
+                filters=filters,
+                max_rows=max_rows,
+            )
+            row_count = _write_detail_sheet(
+                workbook,
+                columns=detail_columns,
+                rows=detail_rows,
+                max_rows=max_rows,
             )
         temporary_output.replace(destination)
     return row_count

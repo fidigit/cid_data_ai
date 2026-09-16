@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+import json
 
 from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
@@ -32,6 +33,8 @@ def create_job(
     days: int,
     estimated_amount_cny: float,
     log_type: str = "client",
+    filters: dict | None = None,
+    export_limit: int = 200000,
 ) -> QueryJob:
     job = QueryJob(
         source=source,
@@ -45,6 +48,8 @@ def create_job(
     db.flush()
     db.add(
         QueryJobContext(
+            filters_json=json.dumps(filters or {}, ensure_ascii=False),
+            export_limit=export_limit,
             log_type=log_type,
             job_id=job.id,
             partition_start=partition_start,

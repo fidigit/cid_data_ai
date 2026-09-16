@@ -1,4 +1,5 @@
 from __future__ import annotations
+import json
 
 from app.core.config import get_settings
 from app.database import SessionLocal
@@ -32,7 +33,8 @@ def execute_query_job(self, job_id: str) -> None:
         if context is None:
             raise RuntimeError("查询任务缺少分区上下文。")
         partitions = PartitionRange(start=context.partition_start, end=context.partition_end)
-        detail_sql, aggregation_sql = build_query_plan(settings, job.event_code, partitions, context.log_type)
+        filters = json.loads(context.filters_json)
+        detail_sql, aggregation_sql = build_query_plan(settings, job.event_code, partitions, context.log_type, filters, context.export_limit)
         odps = OdpsGateway(settings)
 
         with odps.open_rows(aggregation_sql) as aggregate_stream:
@@ -56,7 +58,8 @@ def execute_query_job(self, job_id: str) -> None:
                 aggregation=aggregation,
                 detail_columns=detail_stream.columns,
                 detail_rows=detail_stream.rows,
-                max_rows=settings.max_export_rows,
+                max_rows=context.export_limit,
+                filters=filters,
                 log_type=context.log_type,
             )
             mark_succeeded(

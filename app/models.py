@@ -106,6 +106,8 @@ class QueryJobContext(Base):
 
     job_id: Mapped[str] = mapped_column(ForeignKey("query_jobs.id"), primary_key=True)
     log_type: Mapped[str] = mapped_column(String(16), nullable=False, default="client", server_default="client")
+    filters_json: Mapped[str] = mapped_column(Text, nullable=False, default="{}", server_default="{}")
+    export_limit: Mapped[int] = mapped_column(Integer, nullable=False, default=200000, server_default="200000")
     partition_start: Mapped[str] = mapped_column(String(16), nullable=False)
     partition_end: Mapped[str] = mapped_column(String(16), nullable=False)
     days: Mapped[int] = mapped_column(Integer, nullable=False)

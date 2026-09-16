@@ -6,9 +6,11 @@ from typing import Literal
 from pydantic import BaseModel, Field
 
 from app.models import JobStatus
+from app.domain.query_filters import QueryFilters
 
 
 class QueryRequest(BaseModel):
+    filters: QueryFilters = Field(default_factory=QueryFilters)
     log_type: Literal["client", "web"] = "client"
     question: str = Field(min_length=1, max_length=1000)
     start_date: date | None = None
@@ -18,6 +20,7 @@ class QueryRequest(BaseModel):
 
 
 class QueryEstimateRequest(BaseModel):
+    filters: QueryFilters = Field(default_factory=QueryFilters)
     log_type: Literal["client", "web"] = "client"
     question: str = Field(min_length=1, max_length=1000)
     start_date: date | None = None
@@ -42,6 +45,9 @@ class QueryEstimateResponse(BaseModel):
 
 
 class JobResponse(BaseModel):
+    total_row_count: int | None = None
+    truncated: bool = False
+    export_limit: int = 200000
     log_type: Literal["client", "web"] = "client"
     id: str
     status: JobStatus

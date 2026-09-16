@@ -21,6 +21,7 @@ class CostEstimateClaims:
     estimated_amount_cny: float
     expires_at: int
     log_type: str = "client"
+    query_fingerprint: str = ""
 
 
 def _encode(raw: bytes) -> str:
@@ -44,6 +45,7 @@ def issue_cost_estimate_token(
     partition_end: str,
     estimated_amount_cny: float,
     ttl_seconds: int,
+    query_fingerprint: str = "",
     log_type: str = "client",
     now: int | None = None,
 ) -> tuple[str, int]:
@@ -53,7 +55,8 @@ def issue_cost_estimate_token(
     expires_at = issued_at + ttl_seconds
     payload = {
         "log_type": log_type,
-        "plan_version": 4,
+        "plan_version": 5,
+        "query_fingerprint": query_fingerprint,
         "sub": requester_id,
         "cid": event_code,
         "start": partition_start,
@@ -70,6 +73,7 @@ def verify_cost_estimate_token(
     token: str,
     *,
     secret: str,
+    query_fingerprint: str = "",
     requester_id: str,
     event_code: str,
     partition_start: str,
@@ -90,9 +94,10 @@ def verify_cost_estimate_token(
 
     try:
         payload = json.loads(_decode(body))
-        if payload.get("plan_version") != 4:
+        if payload.get("plan_version") != 5:
             raise CostEstimateTokenError("费用评估版本已更新，请重新评估。")
         claims = CostEstimateClaims(
+            query_fingerprint=str(payload["query_fingerprint"]),
             log_type=str(payload["log_type"]),
             requester_id=str(payload["sub"]),
             event_code=str(payload["cid"]),
@@ -112,7 +117,7 @@ def verify_cost_estimate_token(
         claims.partition_end,
         claims.log_type,
     )
-    if actual != expected:
+    if actual != expected or claims.query_fingerprint != query_fingerprint:
         raise CostEstimateTokenError("查询内容已变化，请重新进行费用评估。")
     current_time = int(time.time()) if now is None else now
     if claims.expires_at <= current_time:

@@ -4,8 +4,7 @@ SELECT
     t3.hdid,
     sys,
     ver,
-    value1,
-    value2,
+    $outer_value_columns
     t3.uid,
     t3.uid AS user_id,
     t3.cid_parm,
@@ -24,8 +23,7 @@ FROM (
         $user_id_column AS uid,
         sys,
         ver,
-        value1,
-        value2,
+        $value_columns
         IF(
             $event_code_column = '160036-0003' AND value1 = '1',
             '冷启动不统计',
@@ -36,6 +34,7 @@ FROM (
     WHERE $partition_column >= '$start_partition'
       AND $partition_column <= '$end_partition'
       AND product_id IN (27090, 27130)
+      $filter_predicates
       AND UPPER(ver) NOT LIKE '%SNAPSHOT%'
       AND INSTR(
           REPLACE($event_code_column, '-', '_'),

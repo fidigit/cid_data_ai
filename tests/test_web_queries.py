@@ -59,11 +59,14 @@ def test_existing_database_upgrade_preserves_rows():
 
 
 @pytest.mark.parametrize("empty", [False, True])
-def test_web_estimate_execute_download_end_to_end(monkeypatch, tmp_path, empty):
+@pytest.mark.parametrize("log_type", ["client", "web"])
+@pytest.mark.parametrize("cap", [1, 200000])
+def test_web_estimate_execute_download_end_to_end(monkeypatch, tmp_path, empty, log_type, cap):
     engine = create_engine("sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool)
     Base.metadata.create_all(engine)
     sessions = sessionmaker(bind=engine, expire_on_commit=False)
-    settings = Settings(_env_file=None, odps_access_id="fake", odps_access_key_secret="fake", odps_project="fake", odps_endpoint="fake", artifacts_dir=tmp_path)
+    settings = Settings(_env_file=None, odps_access_id="fake", odps_access_key_secret="fake", odps_project="fake", odps_endpoint="fake", artifacts_dir=tmp_path,max_export_rows=cap,data_source_table="events",data_partition_column="dt",data_user_id_column="uid",data_event_code_column="cid_parm")
+    code="70081134" if log_type=="web" else "90036"
     estimated, executed, charges = [], [], []
 
     class Gateway:
@@ -74,7 +77,7 @@ def test_web_estimate_execute_download_end_to_end(monkeypatch, tmp_path, empty):
         @contextmanager
         def open_rows(self, sql):
             executed.append(sql)
-            if "COUNT(DISTINCT uid)" in sql:
+            if "COUNT(DISTINCT" in sql:
                 yield QueryStream(("event_date", "eventid", "uv", "pv"), [] if empty else [("20260801", "70081134", 1, 2)], "aggregate-id")
             else:
                 yield QueryStream(("uid", "time", "act_type", "eventid", "dt"), [] if empty else [("001", 123, "=1+1", "70081134", "20260801"), ("001", 124, "click", "70081134", "20260801")], "detail-id")
@@ -93,11 +96,17 @@ def test_web_estimate_execute_download_end_to_end(monkeypatch, tmp_path, empty):
     monkeypatch.setattr("app.workers.tasks.OdpsGateway", Gateway)
     try:
         client = TestClient(app)
-        body = dict(question="看看70081134数据", log_type="web", start_date="2026-08-01", end_date="2026-08-01")
+        body = dict(question=f"看看{code}数据", log_type=log_type, start_date="2026-08-01", end_date="2026-08-01", filters={"systems":["ios"],"versions":["1.0"],"value_fields":["value3","value25"]})
         estimate = client.post("/api/v1/query-estimates", json=body)
         assert estimate.status_code == 200, estimate.text
         assert estimate.json()["estimated_amount_cny"] == .6
         assert len(estimated) == 2
+        if log_type=="client":
+            tampered=client.post("/api/v1/query-requests",json=body|{"filters":{"versions":["2.0"]},"estimate_token":estimate.json()["estimate_token"]})
+            assert tampered.status_code==409
+            assert "AND sys IN ('ios')" in estimated[0]
+            assert "t3.value25" in estimated[0]
+        assert f"LIMIT {cap}" in estimated[0] and "LIMIT" not in estimated[1]
         def reject_budget(*args, **kwargs):
             raise DailyBudgetExceeded("超过今天查询余额上限，请联系yzr")
         monkeypatch.setattr("app.api.routes.reserve_daily_budget", reject_budget)
@@ -108,27 +117,31 @@ def test_web_estimate_execute_download_end_to_end(monkeypatch, tmp_path, empty):
         submission = client.post("/api/v1/query-requests", json=body | {"estimate_token": estimate.json()["estimate_token"]})
         assert submission.status_code == 202, submission.text
         job_id = submission.json()["id"]
-        assert submission.json()["log_type"] == "web"
+        assert submission.json()["log_type"] == log_type
         with sessions() as db:
-            assert db.get(QueryJobContext, job_id).log_type == "web"
+            assert db.get(QueryJobContext, job_id).log_type == log_type
         execute_query_job.run(job_id)
         assert set(executed) == set(estimated)
         assert charges == [.6]
         result = client.get(f"/api/v1/jobs/{job_id}").json()
         assert result["status"] == "succeeded", result
-        assert result["detail_row_count"] == (0 if empty else 2)
+        assert result["detail_row_count"] == (0 if empty else min(cap,2))
+        assert result["truncated"] == (not empty and cap<2)
+        assert result["total_row_count"] == (0 if empty else 2)
         if not empty:
             assert result["aggregation"] == [{"event_date": "20260801", "pv": 2, "uv": 1}]
         download = client.get(f"/api/v1/jobs/{job_id}/download")
         assert download.status_code == 200
-        assert "web_70081134" in download.headers["content-disposition"]
+        assert f"{log_type}_{code}" in download.headers["content-disposition"]
         with ZipFile(next(tmp_path.rglob("*.xlsx"))) as workbook:
-            summary = workbook.read("xl/worksheets/sheet2.xml").decode()
-            assert "eventid" in summary and "70081134" in summary
+            summary = workbook.read("xl/worksheets/sheet1.xml").decode()
+            assert code in summary
+            if log_type=="web": assert "eventid" in summary
+            else: assert "sys：ios" in summary and "value25" in summary
             if not empty:
                 assert "SUM(B5:B5)" in summary
                 assert "SUM(C5:C5)" in summary
-                assert "'=1+1" in workbook.read("xl/worksheets/sheet1.xml").decode()
+                assert "'=1+1" in workbook.read("xl/worksheets/sheet2.xml").decode()
     finally:
         app.dependency_overrides.clear()
         engine.dispose()

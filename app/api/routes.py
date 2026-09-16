@@ -21,7 +21,8 @@ from app.database import get_db
 from app.domain.event_codes import EventCodeExtractionError, extract_unique_event_code, normalize_question
 from app.domain.partitions import PartitionRange, calendar_date_range, latest_calendar_days
 from app.infrastructure.odps_gateway import OdpsGateway, QueryCost
-from app.services.query_plan import build_query_plan
+from app.services.query_plan import build_query_plan, plan_fingerprint
+from app.domain.query_filters import effective_filters, export_limit
 from app.infrastructure.sql_renderer import SqlTemplateError
 from app.models import JobStatus, QueryJob, QueryJobContext
 from app.services.cost_estimates import (
@@ -53,6 +54,9 @@ def _job_response(db: Session, job: QueryJob) -> JobResponse:
         else []
     )
     return JobResponse(
+        total_row_count=sum(item.pv for item in aggregation) if job.status == JobStatus.SUCCEEDED else None,
+        truncated=bool(aggregation and job.detail_row_count is not None and sum(item.pv for item in aggregation) > job.detail_row_count),
+        export_limit=context.export_limit if context else 200000,
         log_type=context.log_type if context else "client",
         id=job.id,
         status=job.status,
@@ -79,6 +83,7 @@ def _query_context(
     start_date: date | None = None,
     end_date: date | None = None,
     log_type: str = "client",
+    filters=None,
 ) -> tuple[str, PartitionRange, str, str, int]:
     try:
         normalized_question = normalize_question(question)
@@ -97,7 +102,7 @@ def _query_context(
         else:
             partitions = latest_calendar_days(today, settings.partition_date_format, days)
             resolved_days = days
-        sql, _ = build_query_plan(settings, event_code, partitions, log_type)
+        sql, _ = build_query_plan(settings, event_code, partitions, log_type, filters)
     except EventCodeExtractionError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except SqlTemplateError as exc:
@@ -122,6 +127,7 @@ def estimate_query(
         request_body.start_date,
         request_body.end_date,
         request_body.log_type,
+        request_body.filters,
     )
     record_usage_event(
         db,
@@ -131,7 +137,7 @@ def estimate_query(
     )
     try:
         gateway = OdpsGateway(settings)
-        detail_sql, aggregation_sql = build_query_plan(settings, event_code, partitions, request_body.log_type)
+        detail_sql, aggregation_sql = build_query_plan(settings, event_code, partitions, request_body.log_type, request_body.filters)
         costs = [gateway.estimate_sql_cost(statement) for statement in (detail_sql, aggregation_sql)]
         cost = QueryCost(
             input_size_bytes=sum(item.input_size_bytes for item in costs),
@@ -152,6 +158,7 @@ def estimate_query(
         partition_end=partitions.end,
         estimated_amount_cny=estimated_amount,
         ttl_seconds=settings.cost_estimate_token_ttl_seconds,
+        query_fingerprint=plan_fingerprint((detail_sql, aggregation_sql)),
         log_type=request_body.log_type,
     )
     return QueryEstimateResponse(
@@ -186,10 +193,12 @@ def submit_query(
         request_body.start_date,
         request_body.end_date,
         request_body.log_type,
+        request_body.filters,
     )
     try:
         claims = verify_cost_estimate_token(
             request_body.estimate_token,
+            query_fingerprint=plan_fingerprint(build_query_plan(settings, event_code, partitions, request_body.log_type, request_body.filters)),
             secret=_signing_secret(settings),
             requester_id=principal.username,
             event_code=event_code,
@@ -223,6 +232,8 @@ def submit_query(
         partition_end=partitions.end,
         days=resolved_days,
         estimated_amount_cny=claims.estimated_amount_cny,
+        filters=effective_filters(request_body.filters, request_body.log_type).model_dump(),
+        export_limit=export_limit(settings),
         log_type=request_body.log_type,
     )
     try:

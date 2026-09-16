@@ -6,6 +6,7 @@ from string import Template
 
 from app.domain.event_codes import is_valid_event_code
 from app.domain.partitions import PartitionRange
+from app.domain.query_filters import effective_filters
 
 
 _IDENTIFIER = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)*$")
@@ -36,13 +37,23 @@ class EventQueryRenderer:
         user_id_column: str,
         event_code: str,
         partitions: PartitionRange,
+        filters=None,
     ) -> str:
         if not is_valid_event_code(event_code):
             raise SqlTemplateError("CID 格式不合法。")
         if not self.template_path.is_file():
             raise SqlTemplateError(f"未找到 SQL 模板：{self.template_path}")
 
+        selected = effective_filters(filters)
+        predicates = []
+        for column, items in (("sys", selected.systems), ("ver", selected.versions)):
+            if items:
+                literals = ", ".join("'" + item.replace("'", "''") + "'" for item in items)
+                predicates.append(f"AND {column} IN ({literals})")
         values = {
+            "value_columns": "".join(f"{name},\n        " for name in selected.value_fields),
+            "outer_value_columns": "".join(f"t3.{name},\n    " for name in selected.value_fields),
+            "filter_predicates": "\n      ".join(predicates),
             "source_table": _identifier(source_table, "数据表"),
             "partition_column": _identifier(partition_column, "分区字段"),
             "event_code_column": _identifier(event_code_column, "CID 字段"),

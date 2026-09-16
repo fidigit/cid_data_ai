@@ -45,6 +45,12 @@ def migrate_log_type(bind) -> None:
             connection.execute(text(
                 "ALTER TABLE query_job_contexts ADD COLUMN log_type VARCHAR(16) NOT NULL DEFAULT 'client'"
             ))
+        for name, definition in (
+            ("filters_json", "TEXT NOT NULL DEFAULT '{}'"),
+            ("export_limit", "INTEGER NOT NULL DEFAULT 200000"),
+        ):
+            if name not in columns:
+                connection.execute(text(f"ALTER TABLE query_job_contexts ADD COLUMN {name} {definition}"))
 
 
 def get_db():
