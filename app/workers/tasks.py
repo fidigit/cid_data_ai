@@ -34,25 +34,29 @@ def execute_query_job(self, job_id: str) -> None:
             raise RuntimeError("查询任务缺少分区上下文。")
         partitions = PartitionRange(start=context.partition_start, end=context.partition_end)
         filters = json.loads(context.filters_json)
-        detail_sql, aggregation_sql = build_query_plan(settings, job.event_code, partitions, context.log_type, filters, context.export_limit)
+        event_codes = json.loads(context.event_codes_json) or [job.event_code]
+        detail_sql, aggregation_sql = build_query_plan(settings, event_codes, partitions, context.log_type, filters, context.export_limit)
         odps = OdpsGateway(settings)
 
         with odps.open_rows(aggregation_sql) as aggregate_stream:
             aggregation = [
                 dict(zip(aggregate_stream.columns, row, strict=True)) for row in aggregate_stream.rows
             ]
-        aggregation.sort(key=lambda item: str(item.get("event_date") or ""))
+        for item in aggregation:
+            item["event_code"] = str(item.get("event_code") or item.get("eventid") or job.event_code)
+        aggregation.sort(key=lambda item: (str(item.get("event_date") or ""), item["event_code"]))
         replace_daily_aggregation(db, job_id=job.id, rows=aggregation)
 
         artifact_path = (
             settings.artifacts_dir
             / job.id
-            / f"{context.log_type}_{job.event_code}_{partitions.start}_{partitions.end}.xlsx"
+            / f"{context.log_type}_{job.event_code}{'_multi' if len(event_codes) > 1 else ''}_{partitions.start}_{partitions.end}.xlsx"
         )
         with odps.open_rows(detail_sql) as detail_stream:
             row_count = build_xlsx(
                 destination=artifact_path,
                 event_code=job.event_code,
+                event_codes=event_codes,
                 partition_start=partitions.start,
                 partition_end=partitions.end,
                 aggregation=aggregation,

@@ -61,12 +61,16 @@ def test_existing_database_upgrade_preserves_rows():
 @pytest.mark.parametrize("empty", [False, True])
 @pytest.mark.parametrize("log_type", ["client", "web"])
 @pytest.mark.parametrize("cap", [1, 200000])
-def test_web_estimate_execute_download_end_to_end(monkeypatch, tmp_path, empty, log_type, cap):
+@pytest.mark.parametrize("multiple", [False, True])
+def test_web_estimate_execute_download_end_to_end(monkeypatch, tmp_path, empty, log_type, cap, multiple):
     engine = create_engine("sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool)
     Base.metadata.create_all(engine)
     sessions = sessionmaker(bind=engine, expire_on_commit=False)
     settings = Settings(_env_file=None, odps_access_id="fake", odps_access_key_secret="fake", odps_project="fake", odps_endpoint="fake", artifacts_dir=tmp_path,max_export_rows=cap,data_source_table="events",data_partition_column="dt",data_user_id_column="uid",data_event_code_column="cid_parm")
     code="70081134" if log_type=="web" else "90036"
+    codes=[code]+(["70081133","70081132"] if log_type=='web' else ['170035','170036']) if multiple else [code]
+    actual=[code, codes[1]] if log_type=='web' and multiple else ([code+'_0001','170035_0001'] if multiple else [code])
+    aggregate_rows=[('20260801',item,1,1) for item in actual] if multiple else [('20260801',code,1,2)]
     estimated, executed, charges = [], [], []
 
     class Gateway:
@@ -78,7 +82,7 @@ def test_web_estimate_execute_download_end_to_end(monkeypatch, tmp_path, empty, 
         def open_rows(self, sql):
             executed.append(sql)
             if "COUNT(DISTINCT" in sql:
-                yield QueryStream(("event_date", "eventid", "uv", "pv"), [] if empty else [("20260801", "70081134", 1, 2)], "aggregate-id")
+                yield QueryStream(("event_date", "eventid" if log_type=='web' else 'event_code', "uv", "pv"), [] if empty else aggregate_rows, "aggregate-id")
             else:
                 yield QueryStream(("uid", "time", "act_type", "eventid", "dt"), [] if empty else [("001", 123, "=1+1", "70081134", "20260801"), ("001", 124, "click", "70081134", "20260801")], "detail-id")
 
@@ -97,15 +101,26 @@ def test_web_estimate_execute_download_end_to_end(monkeypatch, tmp_path, empty, 
     try:
         client = TestClient(app)
         body = dict(question=f"看看{code}数据", log_type=log_type, start_date="2026-08-01", end_date="2026-08-01", filters={"systems":["ios"],"versions":["1.0"],"value_fields":["value3","value25"]})
+        if multiple:
+            body['question']=' '.join(codes)
+            body['filters'].update(new_users=[1],value_filters=[{'field':'value3','logic':'and','conditions':[{'operator':'ge','target':'100'},{'operator':'lt','target':'200'}]}])
         estimate = client.post("/api/v1/query-estimates", json=body)
         assert estimate.status_code == 200, estimate.text
         assert estimate.json()["estimated_amount_cny"] == .6
         assert len(estimated) == 2
+        assert estimate.json()['event_codes']==codes
+        changed_events=client.post('/api/v1/query-requests',json=body|{'question':'70081130' if log_type=='web' else '12345','estimate_token':estimate.json()['estimate_token']})
+        assert changed_events.status_code==409
         if log_type=="client":
             tampered=client.post("/api/v1/query-requests",json=body|{"filters":{"versions":["2.0"]},"estimate_token":estimate.json()["estimate_token"]})
             assert tampered.status_code==409
             assert "AND sys IN ('ios')" in estimated[0]
             assert "t3.value25" in estimated[0]
+            if multiple:
+                assert 'AND is_new = 1' in estimated[0]
+                assert "CAST('100' AS BIGINT)" in estimated[0]
+                changed_new=client.post('/api/v1/query-requests',json=body|{'filters':body['filters']|{'new_users':[0]},'estimate_token':estimate.json()['estimate_token']})
+                assert changed_new.status_code==409
         assert f"LIMIT {cap}" in estimated[0] and "LIMIT" not in estimated[1]
         def reject_budget(*args, **kwargs):
             raise DailyBudgetExceeded("超过今天查询余额上限，请联系yzr")
@@ -129,18 +144,26 @@ def test_web_estimate_execute_download_end_to_end(monkeypatch, tmp_path, empty, 
         assert result["truncated"] == (not empty and cap<2)
         assert result["total_row_count"] == (0 if empty else 2)
         if not empty:
-            assert result["aggregation"] == [{"event_date": "20260801", "pv": 2, "uv": 1}]
+            assert {(row['event_code'],row['pv'],row['uv']) for row in result['aggregation']} == {(row[1],row[3],row[2]) for row in aggregate_rows}
+        assert result['event_codes']==codes
+        assert result['missing_event_codes']==(codes if empty else codes[2:] if multiple else [])
         download = client.get(f"/api/v1/jobs/{job_id}/download")
         assert download.status_code == 200
         assert f"{log_type}_{code}" in download.headers["content-disposition"]
         with ZipFile(next(tmp_path.rglob("*.xlsx"))) as workbook:
             summary = workbook.read("xl/worksheets/sheet1.xml").decode()
             assert code in summary
+            if multiple:
+                assert codes[2] in summary
+                if not empty:
+                    assert all(item in summary for item in actual)
+                if log_type=='client':
+                    assert '大于等于' in summary and '小于' in summary
             if log_type=="web": assert "eventid" in summary
             else: assert "sys：ios" in summary and "value25" in summary
             if not empty:
-                assert "SUM(B5:B5)" in summary
-                assert "SUM(C5:C5)" in summary
+                assert f"SUM(B5:B{4+len(aggregate_rows)})" in summary
+                assert f"SUM(C5:C{4+len(aggregate_rows)})" in summary
                 assert "'=1+1" in workbook.read("xl/worksheets/sheet2.xml").decode()
     finally:
         app.dependency_overrides.clear()

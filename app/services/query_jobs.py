@@ -35,6 +35,7 @@ def create_job(
     log_type: str = "client",
     filters: dict | None = None,
     export_limit: int = 200000,
+    event_codes: list[str] | None = None,
 ) -> QueryJob:
     job = QueryJob(
         source=source,
@@ -49,6 +50,7 @@ def create_job(
     db.add(
         QueryJobContext(
             filters_json=json.dumps(filters or {}, ensure_ascii=False),
+            event_codes_json=json.dumps(event_codes or [event_code]),
             export_limit=export_limit,
             log_type=log_type,
             job_id=job.id,
@@ -72,6 +74,7 @@ def replace_daily_aggregation(
             DailyAggregation(
                 job_id=job_id,
                 event_date=str(row.get("event_date") or ""),
+                event_code=str(row.get("event_code") or row.get("eventid") or ""),
                 pv=int(row.get("pv") or 0),
                 uv=int(row.get("uv") or 0),
             )

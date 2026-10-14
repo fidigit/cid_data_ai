@@ -1298,6 +1298,57 @@
     .chart-value {fill:var(--ink);font:12px monospace;}
     @media(max-width:760px) {.client-filters {grid-template-columns:1fr;} .value-options {grid-template-columns:repeat(5,minmax(0,1fr));}}
     @media(max-width:420px) {.value-options {grid-template-columns:repeat(3,minmax(0,1fr));}}
+    /* v0.0.6: local additions, retain the existing dark mint workflow. */
+    .client-filters {grid-template-columns:minmax(140px,1fr) minmax(180px,1.2fr) minmax(110px,.65fr) minmax(320px,2fr);}
+    .value-options {grid-template-columns:repeat(3,minmax(0,1fr));}
+    .value-tile {display:flex;min-width:0;}
+    .value-tile button[data-value] {flex:1;padding:7px 3px;font-size:11px;}
+    .value-tile button[data-funnel] {flex:0 0 28px;width:28px;padding:4px;border-left:0;color:var(--mint);}
+    .value-tile button[data-funnel]:disabled {opacity:.3;cursor:not-allowed;}
+    .value-tile button[data-filtered="true"] {background:rgba(155,242,199,.2);box-shadow:inset 0 -3px var(--mint);}
+    .value-tile button:hover {transform:none;}
+    .new-user-options {display:flex;gap:12px;align-items:center;min-height:42px;border:1px solid var(--line);padding:0 10px;font-size:13px;}
+    .new-user-options label {white-space:nowrap;}
+    .value-group-summary {border-left:2px solid var(--mint);padding:12px 16px;margin:0 0 24px;background:rgba(155,242,199,.035);font:13px/1.7 var(--display);}
+    .value-group-summary[hidden] {display:none;}
+    #valueGroupItems {display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:10px;}
+    .group-summary-item {min-width:0;min-height:34px;text-align:left;overflow-wrap:anywhere;padding:6px 10px;font-size:12px;max-width:100%;}
+    .group-connector {color:var(--mint);}
+    #valueGroupLogic,#conditionLogic,#valueFilterDialog select,#valueFilterDialog input {border:1px solid var(--line-strong);background:#090e0b;color:var(--ink);padding:10px;font:13px var(--display);border-radius:2px;min-width:0;}
+    #valueFilterDialog {width:min(580px,calc(100vw - 32px));max-height:85vh;overflow:auto;box-sizing:border-box;border:1px solid #4b6b57;border-radius:5px;background:#0d1410;color:var(--ink);padding:24px;box-shadow:0 24px 90px #0009;}
+    #valueFilterDialog::backdrop {background:rgba(0,0,0,.65);}
+    #valueFilterDialog header {display:flex;align-items:center;justify-content:space-between;gap:16px;}
+    #valueFilterDialog h2 {font:22px var(--display);margin:6px 0 0;}
+    #valueFilterDialog small {color:var(--mint);font:10px var(--mono);letter-spacing:.15em;}
+    #valueFilterDialog button {min-width:0;min-height:38px;transform:none;}
+    #closeValueFilter {font-size:24px;padding:0 12px;}
+    .filter-help {font:12px/1.8 var(--display);color:var(--muted);margin:20px 0;}
+    .filter-logic-label {display:flex;align-items:center;gap:14px;font:13px var(--display);margin-bottom:16px;}
+    .condition-row {display:grid;grid-template-columns:140px minmax(0,1fr) 38px;gap:10px;margin:10px 0;}
+    .condition-row + .condition-row {position:relative;margin-top:26px;}
+    .condition-row + .condition-row::before {content:attr(data-relation);position:absolute;top:-21px;left:4px;color:var(--mint);font:11px var(--display);}
+    #conditionRows {max-height:40vh;overflow:auto;}
+    #conditionRows input {width:100%;box-sizing:border-box;}
+    #conditionRows button {padding:0;font-size:20px;}
+    #addCondition {color:var(--mint);margin-top:8px;}
+    #filterValidation {color:var(--danger);font:13px/1.7 var(--display);min-height:22px;}
+    #valueFilterDialog footer {display:flex;justify-content:flex-end;gap:10px;border-top:1px solid var(--line);padding-top:18px;flex-wrap:wrap;}
+    #clearValueFilter {margin-right:auto;color:var(--muted);font-size:12px;}
+    #valueFilterDialog .filter-confirm {color:var(--mint-ink);background:var(--mint);border-color:var(--mint);}
+    .missing-events {margin:18px 24px 0;padding:14px 18px;border:1px solid var(--amber);background:rgba(242,195,107,.07);color:var(--amber);font:14px/1.7 var(--display);overflow-wrap:anywhere;}
+    .chart-controls {display:flex;align-items:start;justify-content:flex-end;gap:12px;flex-wrap:wrap;}
+    .event-selector {max-width:100%;border:1px solid var(--line);padding:10px;font-size:12px;min-width:170px;}
+    .event-selector summary {cursor:pointer;color:var(--mint);}
+    #eventSelections {display:flex;flex-direction:column;gap:10px;max-height:190px;overflow:auto;padding-top:12px;}
+    #eventSelections label {overflow-wrap:anywhere;}
+    #eventSelections input {accent-color:var(--mint);}
+    .event-legend {display:flex;gap:14px;flex-wrap:wrap;margin:12px 0;font-size:11px;overflow-wrap:anywhere;}
+    .analytics-table {white-space:nowrap;}
+    .analytics-panel .panel-head {flex-wrap:wrap;gap:8px;padding-top:12px;padding-bottom:12px;}
+    #analyticsRange {overflow-wrap:anywhere;}
+    @media(max-width:1100px){.client-filters {grid-template-columns:1fr 1fr;}}
+    @media(max-width:760px){.client-filters {grid-template-columns:1fr;}.value-options {grid-template-columns:repeat(3,minmax(0,1fr));}}
+    @media(max-width:480px){#valueFilterDialog {padding:16px;}.condition-row {grid-template-columns:112px minmax(0,1fr) 30px;gap:6px;}#valueFilterDialog select,#valueFilterDialog input {padding:9px 6px;}#valueFilterDialog footer button {padding:0 10px;}}
   </style>
   </head>
   <body>
@@ -1321,7 +1372,7 @@
         <div class="brand">
           <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
           MAXCOMPUTE EVENT INTELLIGENCE
-          <small style="font-weight:normal; opacity:.7">v0.0.5</small>
+          <small style="font-weight:normal; opacity:.7">v0.0.6</small>
         </div>
         <div class="topbar-spacer"></div>
         <span class="status-chip">ENV · PROD</span>
@@ -1370,20 +1421,22 @@
                 <div class="client-filters" id="clientFilters">
                   <div><span class="filter-label">sys / 系统（可多选）</span><details><summary id="sysSummary">不限系统</summary><div class="filter-options" id="sysOptions"><label><input type="checkbox" value="ios"> ios</label><label><input type="checkbox" value="android"> android</label><label><input type="checkbox" value="harmony"> harmony</label></div></details></div>
                   <div><label class="filter-label" for="versionFilter">ver / 版本</label><input id="versionFilter" type="text" maxlength="3250" placeholder="不限；多个版本用空格分隔" autocomplete="off"></div>
+                  <div><span class="filter-label">是否新用户</span><div id="newUserOptions" class="new-user-options"><label><input type="checkbox" value="1" checked> 新</label><label><input type="checkbox" value="0" checked> 旧</label></div></div>
                   <div><span class="filter-label">返回字段 / valueX</span><details><summary id="valueSummary">value1, value2, value3</summary><div class="filter-options value-options" id="valueOptions"></div></details></div>
                 </div>
+                <div id="valueGroupSummary" class="value-group-summary" hidden><label>不同字段之间 <select id="valueGroupLogic" aria-label="不同字段之间的关系"><option value="and">与 · 全部满足</option><option value="or">或 · 任一满足</option></select></label><div id="valueGroupItems"></div></div>
                 <div class="field-heading">
                   <div>
                     <label class="prompt-label" id="consoleTitle" for="question">输入查询指令 <span class="required-tag">必填</span></label>
-                    <p>输入需要查询的埋点编码，系统将自动生成审核过的 ODPS 查询语句。</p>
+                    <p>输入埋点编码，多个事件用空格分隔（最多50个）。系统将自动生成审核过的 ODPS 查询语句。</p>
                   </div>
                 </div>
 
                 <div class="query-layout">
                   <div class="query-main">
                     <div class="input-frame">
-                      <textarea id="question" maxlength="2000" placeholder="例如：看看90056_0001昨天的数据" autocomplete="off" spellcheck="false"></textarea>
-                      <span class="input-meta"><b id="questionCount">0</b> / 2000</span>
+                      <textarea id="question" maxlength="1000" placeholder="例如：170035 170036 90056" autocomplete="off" spellcheck="false"></textarea>
+                      <span class="input-meta"><b id="questionCount">0</b> / 1000</span>
                     </div>
 
                     <div class="date-section">
@@ -1403,7 +1456,7 @@
                   <aside class="stage-side">
                     <section class="guide-card" aria-label="查询指令帮助">
                       <span class="guide-icon" aria-hidden="true">&gt;_</span>
-                      <div><strong id="queryHelpTitle">如何编写查询指令？</strong><ul><li id="queryHelpCode">明确填写埋点编码</li><li id="queryHelpExample">例如：90056_0001</li><li>一次只查询一个事件</li></ul></div>
+                      <div><strong id="queryHelpTitle">如何编写查询指令？</strong><ul><li id="queryHelpCode">明确填写埋点编码</li><li id="queryHelpExample">例如：90056_0001</li><li>多个事件用空格分隔</li></ul></div>
                     </section>
 
                     <section class="receipt" id="receipt" data-state="idle" aria-labelledby="receiptTitle">
@@ -1456,16 +1509,29 @@
 
       <section class="analytics-panel" id="analyticsPanel" hidden aria-labelledby="analyticsTitle">
         <header class="panel-head"><strong id="analyticsTitle">PV / UV analytics</strong><span>按 dt 聚合结果</span><span id="analyticsRange">RANGE · —</span></header>
+        <p id="missingEvents" class="missing-events" role="status" hidden></p>
         <div class="analytics-body">
           <div>
-            <div class="metric-toggle" role="group" aria-label="图表指标"><button type="button" data-metric="pv" aria-pressed="true">PV</button><button type="button" data-metric="uv" aria-pressed="false">UV</button></div>
+            <div class="chart-controls"><details class="event-selector"><summary id="eventSelectionLabel">显示事件</summary><div id="eventSelections"></div></details><div class="metric-toggle" role="group" aria-label="图表指标"><button type="button" data-metric="pv" aria-pressed="true">PV</button><button type="button" data-metric="uv" aria-pressed="false">UV</button></div></div>
+            <div id="eventLegend" class="event-legend"></div>
             <div class="chart-wrap"><svg id="pvUvChart" viewBox="0 0 760 245" role="img" aria-label="按日期展示 PV 和 UV"></svg></div>
           </div>
-          <div><table class="analytics-table"><thead><tr><th>日期</th><th>PV</th><th>UV</th></tr></thead><tbody id="analyticsRows"></tbody></table></div>
+          <div class="chart-wrap"><table class="analytics-table"><thead><tr><th>日期</th><th>事件</th><th>PV</th><th>UV</th></tr></thead><tbody id="analyticsRows"></tbody></table></div>
         </div>
       </section>
     </main>
 
+    <dialog id="valueFilterDialog" aria-labelledby="valueFilterTitle">
+      <form id="valueFilterForm">
+        <header><div><small>CUSTOM FILTER</small><h2 id="valueFilterTitle">自定义筛选</h2></div><button type="button" id="closeValueFilter" aria-label="关闭自定义筛选">×</button></header>
+        <p class="filter-help">数值条件仅支持 BIGINT 整数；文字条件按原文匹配，% 和 _ 不作为通配符。</p>
+        <label class="filter-logic-label">本字段条件之间 <select id="conditionLogic"><option value="and">与 · 全部满足</option><option value="or">或 · 任一满足</option></select></label>
+        <div id="conditionRows"></div>
+        <button type="button" id="addCondition">＋ 添加条件</button>
+        <p id="filterValidation" role="alert"></p>
+        <footer><button type="button" id="clearValueFilter">清除此字段筛选</button><button type="button" id="cancelValueFilter">取消</button><button type="submit" class="filter-confirm">确认</button></footer>
+      </form>
+    </dialog>
     <script>
       const $ = (selector) => document.querySelector(selector);
       const authScreen = $('#authScreen');
@@ -1520,19 +1586,37 @@
       const clientFilters = $('#clientFilters');
       const versionFilter = $('#versionFilter');
       let selectedValues = ['value1','value2','value3'];
+      let valueFilters = [];
+      const operatorLabels = {eq:'等于',ne:'不等于',gt:'大于',ge:'大于等于',lt:'小于',le:'小于等于',starts:'开头是',not_starts:'开头不是',ends:'结尾是',not_ends:'结尾不是',contains:'包含',not_contains:'不包含'};
+      const valueDialog = $('#valueFilterDialog');
+      let editingValue = null, filterOpener = null;
       function currentFilters() {
         if (logType === 'web') return {systems:[],versions:[],value_fields:[]};
-        return {systems:[...document.querySelectorAll('#sysOptions input:checked')].map(input => input.value).sort(),versions:[...new Set(versionFilter.value.trim().split(/\s+/u).filter(Boolean))].sort(),value_fields:[...selectedValues].sort((a,b) => Number(a.slice(5))-Number(b.slice(5)))};
+        return {systems:[...document.querySelectorAll('#sysOptions input:checked')].map(input => input.value).sort(),versions:[...new Set(versionFilter.value.trim().split(/\s+/u).filter(Boolean))].sort(),value_fields:[...selectedValues].sort((a,b) => Number(a.slice(5))-Number(b.slice(5))),new_users:[...document.querySelectorAll('#newUserOptions input:checked')].map(input=>Number(input.value)).sort(),value_logic:$('#valueGroupLogic').value,value_filters:structuredClone(valueFilters)};
       }
       function refreshFilterLabels() {
         const systems = [...document.querySelectorAll('#sysOptions input:checked')].map(input => input.value);
         $('#sysSummary').textContent = systems.join(', ') || '不限系统';
         $('#valueSummary').textContent = selectedValues.length ? `已选 ${selectedValues.length} 项 · ${selectedValues.slice(0,3).join(', ')}${selectedValues.length>3?' …':''}` : '仅基础字段';
-        document.querySelectorAll('#valueOptions button').forEach(button => {
+        document.querySelectorAll('#valueOptions button[data-value]').forEach(button => {
           const active = selectedValues.includes(button.dataset.value);
           button.setAttribute('aria-pressed',String(active));
           button.textContent = button.dataset.value + (active ? ' ×' : '');
           button.setAttribute('aria-label',(active?'取消选择 ':'选择 ')+button.dataset.value);
+        });
+        document.querySelectorAll('#valueOptions button[data-funnel]').forEach(button=>{
+          button.disabled=!selectedValues.includes(button.dataset.funnel);
+          const group=valueFilters.find(item=>item.field===button.dataset.funnel);
+          button.dataset.filtered=String(Boolean(group));
+          button.setAttribute('aria-label',`${button.dataset.funnel} 自定义筛选${group?'（已设置）':''}`);
+        });
+        $('#valueGroupSummary').hidden=logType==='web'||!valueFilters.length;
+        $('#valueGroupItems').replaceChildren();
+        valueFilters.forEach((group,index)=>{
+          if(index){const connector=document.createElement('span');connector.className='group-connector';connector.textContent=$('#valueGroupLogic').value==='and'?'与':'或';$('#valueGroupItems').appendChild(connector);}
+          const item=document.createElement('button');item.type='button';item.className='group-summary-item';
+          item.textContent=`${group.field}（${group.conditions.map(c=>`${operatorLabels[c.operator]} ${JSON.stringify(c.target)}`).join(group.logic==='and'?' 且 ':' 或 ')}）`;
+          item.addEventListener('click',()=>openValueFilter(group.field,item));$('#valueGroupItems').appendChild(item);
         });
       }
       function restoreFilters(filters) {
@@ -1540,6 +1624,9 @@
         document.querySelectorAll('#sysOptions input').forEach(input => {input.checked=(value.systems||[]).includes(input.value);});
         versionFilter.value=(value.versions||[]).join(' ');
         selectedValues=Array.isArray(value.value_fields)?value.value_fields.filter(name=>/^value([1-9]|1[0-9]|2[0-5])$/.test(name)):['value1','value2','value3'];
+        valueFilters=structuredClone(value.value_filters||[]).filter(group=>selectedValues.includes(group.field));
+        $('#valueGroupLogic').value=value.value_logic==='or'?'or':'and';
+        document.querySelectorAll('#newUserOptions input').forEach(input=>{input.checked=(value.new_users||[0,1]).includes(Number(input.value));});
         refreshFilterLabels();
       }
       function filtersChanged() {
@@ -1549,10 +1636,62 @@
         setResult('筛选条件已变化，原费用凭证已失效。');
       }
       for (let i=1;i<=25;i++) {
+        const tile=document.createElement('div');tile.className='value-tile';
         const button=document.createElement('button');button.type='button';button.dataset.value=`value${i}`;
-        button.addEventListener('click',()=>{selectedValues=selectedValues.includes(button.dataset.value)?selectedValues.filter(value=>value!==button.dataset.value):[...selectedValues,button.dataset.value];selectedValues.sort((a,b)=>Number(a.slice(5))-Number(b.slice(5)));filtersChanged();});
-        $('#valueOptions').appendChild(button);
+        button.addEventListener('click',()=>{selectedValues=selectedValues.includes(button.dataset.value)?selectedValues.filter(value=>value!==button.dataset.value):[...selectedValues,button.dataset.value];valueFilters=valueFilters.filter(group=>selectedValues.includes(group.field));selectedValues.sort((a,b)=>Number(a.slice(5))-Number(b.slice(5)));filtersChanged();});
+        const funnel=document.createElement('button');funnel.type='button';funnel.dataset.funnel=`value${i}`;
+        funnel.innerHTML='<svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true"><path d="M3 4h14l-5 6v5l-4 2v-7z" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>';
+        funnel.addEventListener('click',()=>openValueFilter(funnel.dataset.funnel,funnel));
+        tile.append(button,funnel);$('#valueOptions').appendChild(tile);
       }
+      function openValueFilter(field,opener) {
+        if(queryInFlight||!selectedValues.includes(field))return;
+        editingValue=field;filterOpener=opener;
+        const group=valueFilters.find(item=>item.field===field);
+        $('#valueFilterTitle').textContent=`${field} · 自定义筛选`;
+        $('#conditionLogic').value=group?.logic||'and';
+        $('#conditionRows').replaceChildren();$('#filterValidation').textContent='';
+        (group?.conditions||[{operator:'eq',target:''},{operator:'eq',target:''}]).forEach(addConditionRow);
+        valueDialog.showModal();
+      }
+      function addConditionRow(condition={operator:'eq',target:''}) {
+        if($('#conditionRows').children.length>=20)return;
+        const row=document.createElement('div');row.className='condition-row';
+        const select=document.createElement('select');select.setAttribute('aria-label','筛选条件');
+        Object.entries(operatorLabels).forEach(([value,text])=>select.add(new Option(text,value)));
+        select.value=condition.operator;
+        const input=document.createElement('input');input.type='text';input.maxLength=1000;input.value=condition.target;input.placeholder='请输入目标值';input.setAttribute('aria-label','目标值');
+        const remove=document.createElement('button');remove.type='button';remove.textContent='−';remove.setAttribute('aria-label','删除条件');
+        remove.addEventListener('click',()=>{row.remove();syncConditionButtons();});
+        row.append(select,input,remove);$('#conditionRows').appendChild(row);syncConditionButtons();
+      }
+      function syncConditionButtons(){const rows=[...$('#conditionRows').children];rows.forEach(row=>{row.querySelector('button').disabled=rows.length<=1;row.dataset.relation=$('#conditionLogic').value==='and'?'且 · AND':'或 · OR';});$('#addCondition').disabled=rows.length>=20;}
+      $('#conditionLogic').addEventListener('change',syncConditionButtons);
+      $('#valueFilterForm').addEventListener('input',()=>{$('#filterValidation').textContent='';});
+      $('#addCondition').addEventListener('click',()=>addConditionRow());
+      ['closeValueFilter','cancelValueFilter'].forEach(id=>$('#'+id).addEventListener('click',()=>valueDialog.close()));
+      valueDialog.addEventListener('close',()=>filterOpener?.focus());
+      $('#clearValueFilter').addEventListener('click',()=>{valueFilters=valueFilters.filter(group=>group.field!==editingValue);filtersChanged();valueDialog.close();});
+      $('#valueFilterForm').addEventListener('submit',event=>{
+        event.preventDefault();
+        const conditions=[...$('#conditionRows').children].map(row=>({operator:row.querySelector('select').value,target:row.querySelector('input').value}));
+        for(const condition of conditions){
+          if(['eq','ne','gt','ge','lt','le'].includes(condition.operator)){
+            const target=condition.target.trim();
+            if(!/^[+-]?[0-9]+$/.test(target)||BigInt(target)<-9223372036854775808n||BigInt(target)>9223372036854775807n){$('#filterValidation').textContent='数值条件请输入 BIGINT 范围内的整数；不接受小数或文字。';return;}
+            condition.target=String(BigInt(target));
+          }
+        }
+        valueFilters=valueFilters.filter(group=>group.field!==editingValue);
+        valueFilters.push({field:editingValue,logic:$('#conditionLogic').value,conditions});
+        valueFilters.sort((a,b)=>Number(a.field.slice(5))-Number(b.field.slice(5)));
+        filtersChanged();valueDialog.close();
+      });
+      $('#valueGroupLogic').addEventListener('change',filtersChanged);
+      $('#newUserOptions').addEventListener('change',event=>{
+        if(!$('#newUserOptions input:checked')){event.target.checked=true;setResult('新、旧用户至少选择一项。','error');return;}
+        filtersChanged();
+      });
       $('#sysOptions').addEventListener('change',filtersChanged);
       versionFilter.addEventListener('input',filtersChanged);
       refreshFilterLabels();
@@ -1565,16 +1704,18 @@
         queryDateRange.inert = locked;
         recentQueries.inert = locked;
         clientFilters.inert = locked;
+        $('#valueGroupSummary').inert = locked;
         estimateButton.disabled = locked;
       }
       function selectLogType(type) {
         logType = type === 'web' ? 'web' : 'client';
         clientFilters.hidden = logType === 'web';
+        refreshFilterLabels();
         logTypeButtons.forEach(button => button.setAttribute('aria-pressed', String(button.dataset.logType === logType)));
         $('#queryHelpTitle').textContent = logType === 'web' ? '如何查询 WEB 日志？' : '如何编写查询指令？';
         $('#queryHelpCode').textContent = logType === 'web' ? '输入 eventid 事件编码' : '明确填写埋点编码';
         $('#queryHelpExample').textContent = logType === 'web' ? '例如：70081134' : '例如：90056_0001';
-        question.placeholder = logType === 'web' ? '例如：帮我查询70081134的数据' : '例如：看看90056_0001昨天的数据';
+        question.placeholder = logType === 'web' ? '例如：70081134 70081133' : '例如：170035 170036 90056';
         analyticsPanel.hidden = true;
         resetEstimate('日志类型已切换，请重新评估。');
         setResult(`已选择${typeLabel(logType)}，请输入事件编码并评估费用。`);
@@ -1862,7 +2003,21 @@
 
       window.addEventListener('pagehide', () => sendVisitHeartbeat(true));
 
-      let analyticsData = [], analyticsText = '', chartMetric = 'pv';
+      let analyticsData = [], analyticsText = '', chartMetric = 'pv', selectedChartEvents = new Set();
+      let analyticsMissing = [];
+      function showAnalytics(current,rangeText) {
+        analyticsMissing=current.missing_event_codes||[];
+        const rows=(current.aggregation||[]).map(row=>({...row,event_code:row.event_code||current.event_code}));
+        selectedChartEvents=new Set(rows.map(row=>row.event_code));
+        $('#eventSelections').replaceChildren();
+        [...selectedChartEvents].sort().forEach(code=>{
+          const label=document.createElement('label'),input=document.createElement('input');
+          input.type='checkbox';input.checked=true;input.value=code;
+          input.addEventListener('change',()=>{input.checked?selectedChartEvents.add(code):selectedChartEvents.delete(code);renderAnalytics(analyticsData,analyticsText);});
+          label.append(input,document.createTextNode(' '+code));$('#eventSelections').appendChild(label);
+        });
+        renderAnalytics(rows,rangeText);
+      }
       document.querySelectorAll('[data-metric]').forEach(button=>button.addEventListener('click',()=>{chartMetric=button.dataset.metric;renderAnalytics(analyticsData,analyticsText);}));
       window.addEventListener('resize',()=>{if(!analyticsPanel.hidden)renderAnalytics(analyticsData,analyticsText);});
       function renderAnalytics(rows, rangeText) {
@@ -1871,14 +2026,20 @@
         pvUvChart.setAttribute('aria-label',`${chartMetric.toUpperCase()} 每日统计`);
         analyticsRows.replaceChildren();
         pvUvChart.replaceChildren();
-        if (!Array.isArray(rows) || !rows.length) {
-          analyticsPanel.hidden = true;
-          return;
-        }
         analyticsPanel.hidden = false;
         analyticsRange.textContent = `RANGE · ${rangeText}`;
+        $('#missingEvents').hidden=!analyticsMissing.length&&!(!rows.length);
+        $('#missingEvents').textContent=analyticsMissing.length?`未返回匹配数据的事件：${analyticsMissing.join('、')}。请检查日期及筛选条件；此核验基于完整聚合结果。`:'当前查询没有匹配数据。';
+        const allCodes=[...new Set(rows.map(row=>row.event_code))].sort();
+        const codes=allCodes.filter(code=>selectedChartEvents.has(code));
+        $('#eventSelectionLabel').textContent=`显示事件 · ${codes.length} / ${allCodes.length}`;
+        const dates=[...new Set(rows.map(row=>String(row.event_date)))].sort();
+        const colors=['#9bf2c7','#f2c36b','#7dc7ef','#d4a4f4','#ed9e9e','#94c4b5'];
+        $('#eventLegend').replaceChildren();
+        codes.forEach(code=>{const legend=document.createElement('span');legend.style.color=colors[allCodes.indexOf(code)%colors.length];legend.textContent='■ '+code;$('#eventLegend').appendChild(legend);});
+        const visibleRows=rows.filter(row=>selectedChartEvents.has(row.event_code));
         const namespace = 'http://www.w3.org/2000/svg';
-        const width = Math.max(300, pvUvChart.parentElement.clientWidth, rows.length*95+90);
+        const width = Math.max(300, pvUvChart.parentElement.clientWidth, dates.length*Math.max(95,codes.length*88+24)+102);
         pvUvChart.style.minWidth='0';
         pvUvChart.style.width=`${width}px`;
         pvUvChart.setAttribute('viewBox',`0 0 ${width} 245`);
@@ -1886,7 +2047,7 @@
         const plot = {left: 76, right: 26, top: 34, bottom: 38};
         const plotWidth = width - plot.left - plot.right;
         const plotHeight = height - plot.top - plot.bottom;
-        const maxValue = Math.max(1, ...rows.map(item=>Number(item[chartMetric]||0))) * 1.15;
+        const maxValue = visibleRows.reduce((max,item)=>Math.max(max,Number(item[chartMetric]||0)),1)*1.15;
         const make = (tag, attrs = {}, text = '') => {
           const element = document.createElementNS(namespace, tag);
           Object.entries(attrs).forEach(([key, value]) => element.setAttribute(key, String(value)));
@@ -1899,18 +2060,27 @@
           make('line', {x1: plot.left, x2: width - plot.right, y1: y, y2: y, class: 'chart-grid'});
           make('text', {x: plot.left - 8, y: y + 3, 'text-anchor': 'end', class: 'chart-label'}, Math.round(maxValue * (1 - index / 4)).toLocaleString());
         }
-        const groupWidth = plotWidth / rows.length;
-        const barWidth = Math.min(28, groupWidth * .28);
-        rows.forEach((item, index) => {
+        if(!codes.length){make('text',{x:width/2,y:125,'text-anchor':'middle',class:'chart-label'},rows.length?'请选择至少一个事件显示':'暂无匹配数据');return;}
+        const groupWidth = plotWidth / Math.max(1,dates.length);
+        const slotWidth=(groupWidth-24)/codes.length;
+        const barWidth = Math.min(30,slotWidth*.55);
+        const lookup=new Map(rows.map(item=>[JSON.stringify([String(item.event_date),item.event_code]),item]));
+        dates.forEach((label,index)=>{
           const center = plot.left + groupWidth * index + groupWidth / 2;
+          codes.forEach((code,codeIndex)=>{
+          const item=lookup.get(JSON.stringify([label,code]))||{pv:0,uv:0};
+          const barCenter=plot.left+groupWidth*index+12+slotWidth*(codeIndex+.5);
           const count=Number(item[chartMetric]||0);
           const barHeight=count / maxValue * plotHeight;
-          make('rect', {x:center-barWidth/2,y:plot.top+plotHeight-barHeight,width:barWidth,height:barHeight,class:`chart-${chartMetric}`});
-          make('text',{x:center,y:plot.top+plotHeight-barHeight-8,'text-anchor':'middle',class:'chart-value'},count.toLocaleString('en-US'));
-          const label = String(item.event_date || '');
+          const bar=make('rect', {x:barCenter-barWidth/2,y:plot.top+plotHeight-barHeight,width:barWidth,height:barHeight,style:`fill:${colors[allCodes.indexOf(code)%colors.length]}`,class:`chart-${chartMetric}`});
+          const title=document.createElementNS(namespace,'title');title.textContent=`${label} · ${code} · ${chartMetric.toUpperCase()} ${count}`;bar.appendChild(title);
+          make('text',{x:barCenter,y:plot.top+plotHeight-barHeight-8,'text-anchor':'middle',class:'chart-value'},count.toLocaleString('en-US'));
+          });
           make('text', {x: center, y: height - 13, 'text-anchor': 'middle', class: 'chart-label'}, label.length === 8 ? `${label.slice(4, 6)}-${label.slice(6, 8)}` : label);
+        });
+        visibleRows.forEach(item=>{
           const row = document.createElement('tr');
-          [label, Number(item.pv || 0).toLocaleString(), Number(item.uv || 0).toLocaleString()].forEach((value) => {
+          [String(item.event_date), item.event_code, Number(item.pv || 0).toLocaleString(), Number(item.uv || 0).toLocaleString()].forEach((value) => {
             const cell = document.createElement('td');
             cell.textContent = value;
             row.appendChild(cell);
@@ -1921,13 +2091,7 @@
 
       question.addEventListener('input', () => {
         inputRevision += 1;
-        const cleaned = question.value.replace(/\s+/gu, '');
-        if (cleaned !== question.value) {
-          const cursorPosition = question.selectionStart;
-          const removedBeforeCursor = (question.value.slice(0, cursorPosition).match(/\s/gu) || []).length;
-          question.value = cleaned;
-          question.setSelectionRange(cursorPosition - removedBeforeCursor, cursorPosition - removedBeforeCursor);
-        }
+        // Preserve separators while typing; normalize redundant whitespace on submission.
         questionCount.textContent = String(question.value.length);
         if (estimateToken) {
           resetEstimate();
@@ -1944,7 +2108,7 @@
       queryDateRange.addEventListener('rangechange', handleDateChange);
 
       estimateButton.addEventListener('click', async () => {
-        const value = question.value.replace(/\s+/gu, '');
+        const value = question.value.replace(/\s+/gu, ' ').trim();
         let range;
         if (!value) {
           setReceipt('error', '缺少查询内容', 'INPUT_REQUIRED', '请先输入包含事件编码的查询问题。');
@@ -2032,7 +2196,7 @@
       });
 
       submitButton.addEventListener('click', async () => {
-        const value = question.value.replace(/\s+/gu, '');
+        const value = question.value.replace(/\s+/gu, ' ').trim();
         let range;
         try { range = selectedDateRange(); }
         catch (error) { setResult(error.message, 'error'); return; }
@@ -2092,7 +2256,7 @@
                 setReceipt('ready', '查询完成', 'COMPLETE', '明细数据和聚合统计工作表已生成。');
                 setWorkflowStage('complete');
                 updateLog(logQuery, 'success', `结果文件已生成 · ${current.detail_row_count ?? 0} 行`, 'DONE');
-                renderAnalytics(current.aggregation, `${typeLabel(current.log_type)} · ${current.event_code} · ${range.start} — ${range.end}`);
+                showAnalytics(current, `${typeLabel(current.log_type)} · ${(current.event_codes||[current.event_code]).join(' / ')} · ${range.start} — ${range.end}`);
                 rememberQuery(value, range, submittedLogType, submittedFilters);
                 window.setTimeout(() => { window.location.href = link.href; }, 250);
               } else if (current.status === 'failed') {

@@ -1,0 +1,98 @@
+// Mocked browser acceptance: no server, ODPS query, or real credentials required.
+const {chromium}=require('playwright');
+const fs=require('node:fs');
+const assert=require('node:assert/strict');
+(async()=>{
+  const browser=await chromium.launch({headless:true,channel:process.env.BROWSER_CHANNEL||'msedge'});
+  try{
+    const page=await browser.newPage({viewport:{width:1440,height:1080}});
+    const errors=[];page.on('pageerror',error=>errors.push(error.message));
+    let lastEstimate,lastSubmit,empty=false;
+    await page.route('http://preview.local/**',route=>{
+      const path=new URL(route.request().url()).pathname;
+      if(path==='/')return route.fulfill({contentType:'text/html',body:fs.readFileSync('app/web/index.html','utf8')});
+      if(path==='/assets/date-range-picker.js')return route.fulfill({contentType:'application/javascript',body:fs.readFileSync('app/web/date-range-picker.js','utf8')});
+      if(path==='/api/v1/auth/me')return route.fulfill({json:{username:'preview',role:'superadmin',is_superadmin:true}});
+      if(path==='/api/v1/query-estimates'){
+        lastEstimate=route.request().postDataJSON();
+        return route.fulfill({json:{log_type:'client',event_code:'170035 170036 90056',event_codes:['170035','170036','90056'],partition_start:'20260901',partition_end:'20260902',input_size_bytes:2147483648,complexity:1,udf_count:0,estimated_amount_cny:.6,price_per_gib_cny:.3,estimate_token:'mock',expires_at:new Date(Date.now()+600000).toISOString()}});
+      }
+      if(path==='/api/v1/query-requests'){lastSubmit=route.request().postDataJSON();return route.fulfill({json:{id:'v006-job'}});}
+      if(path==='/api/v1/jobs/v006-job')return route.fulfill({json:{id:'v006-job',status:'succeeded',log_type:'client',event_code:'170035',event_codes:['170035','170036','90056'],missing_event_codes:empty?['170035','170036','90056']:['170036'],detail_row_count:empty?0:1,total_row_count:empty?0:80,truncated:!empty,export_limit:1,aggregation:empty?[]:[{event_date:'20260901',event_code:'170035_0001',pv:30,uv:12},{event_date:'20260901',event_code:'90056_0001',pv:40,uv:20},{event_date:'20260902',event_code:'170035_0001',pv:10,uv:5}]}});
+      if(path.endsWith('/download'))return route.fulfill({headers:{'Content-Disposition':'attachment; filename=mock.xlsx'},body:'mock'});
+      return route.fulfill({json:{id:'preview'}});
+    });
+    await page.goto('http://preview.local/');await page.locator('#appShell').waitFor({state:'visible'});
+    fs.mkdirSync('outputs/v006-preview',{recursive:true});
+    await page.locator('#valueSummary').click();
+    assert.equal(await page.locator('[data-funnel="value4"]').isDisabled(),true);
+    await page.locator('[data-funnel="value1"]').click();
+    assert.equal(await page.locator('.condition-row').count(),2);
+    await page.locator('.filter-confirm').click();
+    assert.match(await page.locator('#filterValidation').textContent(),/BIGINT/);
+    await page.locator('.condition-row input').nth(0).fill('100');
+    await page.locator('.condition-row input').nth(1).fill('200');
+    await page.locator('#conditionLogic').selectOption('or');
+    await page.locator('#addCondition').click();assert.equal(await page.locator('.condition-row').count(),3);
+    await page.locator('.condition-row button').last().click();
+    await page.screenshot({path:'outputs/v006-preview/value-dialog-desktop.png',fullPage:true});
+    await page.locator('.filter-confirm').click();
+    await page.locator('[data-funnel="value2"]').click();
+    await page.locator('.condition-row select').nth(0).selectOption('starts');
+    await page.locator('.condition-row select').nth(1).selectOption('contains');
+    await page.locator('.condition-row input').nth(0).fill('abc');
+    await page.locator('.condition-row input').nth(1).fill("a'\\_% <script>");
+    await page.locator('#conditionLogic').selectOption('or');
+    await page.locator('.filter-confirm').click();
+    assert.match(await page.locator('#valueGroupItems').textContent(),/value1.*100.*200.*value2/s);
+    await page.locator('#newUserOptions input[value="0"]').uncheck();
+    await page.locator('#newUserOptions input[value="1"]').click();
+    assert.equal(await page.locator('#newUserOptions input[value="1"]').isChecked(),true);
+    await page.locator('#question').fill('170035  170036\n90056');
+    await page.locator('#estimateButton').click();
+    await page.waitForFunction(()=>!document.querySelector('#submitButton').disabled);
+    assert.equal(lastEstimate.question,'170035 170036 90056');
+    assert.deepEqual(lastEstimate.filters.new_users,[1]);
+    assert.equal(lastEstimate.filters.value_filters.length,2);
+    await page.locator('#valueGroupLogic').selectOption('or');
+    assert.equal(await page.locator('#submitButton').isDisabled(),true);
+    await page.locator('#estimateButton').click();await page.waitForFunction(()=>!document.querySelector('#submitButton').disabled);
+    assert.equal(lastEstimate.filters.value_logic,'or');
+    await page.locator('#submitButton').click();await page.locator('#result a').waitFor({state:'visible'});
+    assert.deepEqual(lastSubmit.filters,lastEstimate.filters);
+    assert.match(await page.locator('#missingEvents').textContent(),/170036/);
+    assert.equal(await page.locator('#pvUvChart rect').count(),4);
+    assert.deepEqual(await page.locator('#pvUvChart .chart-value').allTextContents(),['30','40','10','0']);
+    await page.locator('[data-metric="uv"]').click();
+    assert.deepEqual(await page.locator('#pvUvChart .chart-value').allTextContents(),['12','20','5','0']);
+    await page.screenshot({path:'outputs/v006-preview/results-desktop.png',fullPage:true});
+    await page.locator('.event-selector summary').click();
+    await page.locator('#eventSelections input[value="90056_0001"]').uncheck();
+    assert.equal(await page.locator('#pvUvChart rect').count(),2);
+    await page.locator('#eventSelections input[value="170035_0001"]').uncheck();
+    assert.match(await page.locator('#pvUvChart').textContent(),/请选择至少一个事件/);
+    await page.locator('#eventSelections input[value="90056_0001"]').check();
+    await page.setViewportSize({width:390,height:844});
+    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
+    await page.screenshot({path:'outputs/v006-preview/results-mobile.png',fullPage:true});
+    await page.locator('[data-funnel="value1"]').click();
+    await page.screenshot({path:'outputs/v006-preview/value-dialog-mobile.png',fullPage:true});
+    assert.equal(await page.locator('#valueFilterDialog').evaluate(el=>el.scrollWidth<=el.clientWidth),true);
+    await page.keyboard.press('Escape');
+    await page.locator('[data-value="value1"]').click();
+    assert.equal(await page.locator('[data-funnel="value1"]').isDisabled(),true);
+    assert.doesNotMatch(await page.locator('#valueGroupItems').textContent(),/value1/);
+    await page.locator('.recent-use').first().click();
+    assert.match(await page.locator('#valueGroupItems').textContent(),/value1/);
+    assert.equal(await page.locator('#valueGroupLogic').inputValue(),'or');
+    empty=true;
+    await page.locator('#estimateButton').click();await page.waitForFunction(()=>!document.querySelector('#submitButton').disabled);
+    await page.locator('#submitButton').click();await page.waitForFunction(()=>document.querySelector('#missingEvents').textContent.includes('90056'));
+    assert.equal(await page.locator('#analyticsPanel').isVisible(),true);
+    assert.match(await page.locator('#pvUvChart').textContent(),/暂无匹配数据/);
+    await page.locator('[data-log-type="web"]').click();
+    assert.equal(await page.locator('#valueGroupSummary').isVisible(),false);
+    assert.deepEqual(errors,[]);
+    console.log('PASS v006: selected-only dialog, validation, add/remove, group logic, new users, whitespace, bound estimates, history, multi-event bars and switches, missing/all-empty results, mobile layout.');
+  }finally{await browser.close();}
+})().catch(error=>{console.error(error);process.exitCode=1;});

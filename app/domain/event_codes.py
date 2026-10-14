@@ -14,8 +14,8 @@ class EventCodeExtractionError(ValueError):
 
 
 def normalize_question(question: str) -> str:
-    """移除用户输入中的全部 Unicode 空白字符。"""
-    return re.sub(r"\s+", "", question)
+    """保留事件间分隔符，只清理重复空白及编码连接符两侧空白。"""
+    return re.sub(r"(?<=\d)\s*([_-])\s*(?=\d)", r"\1", re.sub(r"\s+", " ", question).strip())
 
 
 WEB_EVENT_CODE_PATTERN = re.compile(r"(?<![A-Za-z0-9_-])(?P<code>\d{8})(?![A-Za-z0-9_-])")
@@ -46,3 +46,20 @@ def extract_unique_event_code(question: str, log_type: str = "client") -> str:
 def is_valid_event_code(value: str, log_type: str = "client") -> bool:
     pattern = WEB_EVENT_CODE_PATTERN if log_type == "web" else EVENT_CODE_PATTERN
     return pattern.fullmatch(value) is not None
+
+
+def extract_event_codes(question: str, log_type: str = "client") -> list[str]:
+    codes = find_event_codes(question, log_type)
+    if not codes:
+        extract_unique_event_code(question, log_type)  # existing localized error
+    if len(codes) > 50:
+        raise EventCodeExtractionError("单次最多查询50个事件编码。")
+    return codes
+
+
+def missing_event_codes(requested, returned, log_type="client"):
+    actual = {str(code).replace("-", "_") for code in returned if code}
+    return [code for code in requested if not any(
+        (code == item if log_type == "web" else code.replace("-", "_") in item)
+        for item in actual
+    )]

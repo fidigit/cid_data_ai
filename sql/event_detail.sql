@@ -4,6 +4,7 @@ SELECT
     t3.hdid,
     sys,
     ver,
+    t3.is_new,
     $outer_value_columns
     t3.uid,
     t3.uid AS user_id,
@@ -23,6 +24,7 @@ FROM (
         $user_id_column AS uid,
         sys,
         ver,
+        is_new,
         $value_columns
         IF(
             $event_code_column = '160036-0003' AND value1 = '1',
@@ -36,10 +38,7 @@ FROM (
       AND product_id IN (27090, 27130)
       $filter_predicates
       AND UPPER(ver) NOT LIKE '%SNAPSHOT%'
-      AND INSTR(
-          REPLACE($event_code_column, '-', '_'),
-          REPLACE('$event_code', '-', '_')
-      ) > 0
+      AND ($event_predicates)
 ) t3
 LEFT OUTER JOIN biugolite_dim_cid_parm AS t4
   ON t3.cid_parm = t4.cid_parm

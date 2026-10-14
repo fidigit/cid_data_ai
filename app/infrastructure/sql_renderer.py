@@ -7,6 +7,7 @@ from string import Template
 from app.domain.event_codes import is_valid_event_code
 from app.domain.partitions import PartitionRange
 from app.domain.query_filters import effective_filters
+from app.infrastructure.filter_sql import render_value_filters
 
 
 _IDENTIFIER = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)*$")
@@ -39,18 +40,28 @@ class EventQueryRenderer:
         partitions: PartitionRange,
         filters=None,
     ) -> str:
-        if not is_valid_event_code(event_code):
+        codes = event_code if isinstance(event_code, list) else [event_code]
+        if not codes or len(codes) > 50 or not all(is_valid_event_code(code) for code in codes):
             raise SqlTemplateError("CID 格式不合法。")
         if not self.template_path.is_file():
             raise SqlTemplateError(f"未找到 SQL 模板：{self.template_path}")
 
         selected = effective_filters(filters)
         predicates = []
+        if len(selected.new_users) == 1:
+            predicates.append(f"AND is_new = {selected.new_users[0]}")
+        condition = render_value_filters(selected)
+        if condition:
+            predicates.append("AND " + condition)
         for column, items in (("sys", selected.systems), ("ver", selected.versions)):
             if items:
                 literals = ", ".join("'" + item.replace("'", "''") + "'" for item in items)
                 predicates.append(f"AND {column} IN ({literals})")
         values = {
+            "event_predicates": " OR ".join(
+                f"INSTR(REPLACE({_identifier(event_code_column, 'CID 字段')}, '-', '_'), REPLACE('{code}', '-', '_')) > 0"
+                for code in codes
+            ),
             "value_columns": "".join(f"{name},\n        " for name in selected.value_fields),
             "outer_value_columns": "".join(f"t3.{name},\n    " for name in selected.value_fields),
             "filter_predicates": "\n      ".join(predicates),
@@ -58,7 +69,7 @@ class EventQueryRenderer:
             "partition_column": _identifier(partition_column, "分区字段"),
             "event_code_column": _identifier(event_code_column, "CID 字段"),
             "user_id_column": _identifier(user_id_column, "UV 字段"),
-            "event_code": event_code,
+            "event_code": codes[0],
             "start_partition": partitions.start,
             "end_partition": partitions.end,
         }
@@ -77,9 +88,10 @@ class EventQueryRenderer:
 )
 SELECT
   CAST(event_date AS STRING) AS event_date,
+  cid_parm AS event_code,
   COUNT(1) AS pv,
   COUNT(DISTINCT user_id) AS uv
 FROM event_detail
-GROUP BY event_date
+GROUP BY event_date, cid_parm
 ;
 """

@@ -81,6 +81,7 @@ def _write_aggregation_sheet(
     log_type: str = "client",
     filters: dict | None = None,
     max_rows: int = 200000,
+    event_codes: list[str] | None = None,
 ) -> None:
     worksheet = workbook.add_worksheet("聚合统计")
     worksheet.activate()
@@ -130,7 +131,8 @@ def _write_aggregation_sheet(
 
     worksheet.set_row(0, 26)
     label = "WEB eventid" if log_type == "web" else "CID"
-    title = f"{label} {event_code} 近 {_day_count(partition_start, partition_end)} 天聚合统计"
+    codes = event_codes or [event_code]
+    title = f"{label} {', '.join(codes)} 近 {_day_count(partition_start, partition_end)} 天聚合统计"
     worksheet.write(0, 0, title, title_format)
     worksheet.write_blank(0, 1, None, title_format)
     worksheet.write_blank(0, 2, None, title_format)
@@ -139,9 +141,8 @@ def _write_aggregation_sheet(
     worksheet.write_blank(1, 2, None, subtitle_format)
     worksheet.set_row(3, 22)
     worksheet.write_row(3, 0, ["日期", "PV", "UV"], header_format)
-    if log_type == "web":
-        worksheet.set_column("D:D", 18)
-        worksheet.write(3, 3, "eventid", header_format)
+    worksheet.set_column("D:D", 24)
+    worksheet.write(3, 3, "eventid" if log_type == "web" else "cid_parm", header_format)
 
     total_pv = 0
     total_uv = 0
@@ -154,8 +155,7 @@ def _write_aggregation_sheet(
         worksheet.write(row_index, 0, str(item.get("event_date") or ""))
         worksheet.write_number(row_index, 1, pv, count_format)
         worksheet.write_number(row_index, 2, uv, count_format)
-        if log_type == "web":
-            worksheet.write_string(row_index, 3, event_code)
+        worksheet.write_string(row_index, 3, str(item.get("event_code") or item.get("eventid") or event_code))
 
     if aggregation:
         total_row = 4 + len(aggregation)
@@ -175,7 +175,7 @@ def _write_aggregation_sheet(
             total_count_format,
             total_uv,
         )
-        worksheet.write(total_row + 2, 0, "UV合计为每日UV之和，非区间去重人数。")
+        worksheet.write(total_row + 2, 0, "UV合计为各日期、各事件UV之和，非跨日期或跨事件去重人数。")
     note_row = 8 + len(aggregation)
     total_rows = sum(int(item.get("pv") or 0) for item in aggregation)
     if total_rows > max_rows:
@@ -189,6 +189,21 @@ def _write_aggregation_sheet(
         worksheet.write(note_row + 1, 0, "sys：" + (", ".join(selected.systems) or "不限"))
         worksheet.write(note_row + 2, 0, "ver：" + (", ".join(selected.versions) or "不限"))
         worksheet.write(note_row + 3, 0, "返回字段：" + (", ".join(selected.value_fields) or "仅基础字段"))
+        worksheet.write(note_row + 4, 0, "新旧用户：" + ("全部" if len(selected.new_users) == 2 else "新" if selected.new_users == [1] else "旧"))
+        worksheet.write_string(note_row + 5, 0, "自定义筛选组之间：" + selected.value_logic.upper())
+    from app.domain.event_codes import missing_event_codes
+    missing = missing_event_codes(codes, [item.get("event_code") or item.get("eventid") or event_code for item in aggregation], log_type)
+    worksheet.write_string(note_row + 6, 0, "无匹配数据的输入事件：" + (", ".join(missing) or "无"))
+    if log_type == "client":
+        labels = {"eq":"等于", "ne":"不等于", "gt":"大于", "ge":"大于等于", "lt":"小于", "le":"小于等于", "starts":"开头是", "not_starts":"开头不是", "ends":"结尾是", "not_ends":"结尾不是", "contains":"包含", "not_contains":"不包含"}
+        row_index = note_row + 7
+        for group in selected.value_filters:
+            for condition in group.conditions:
+                worksheet.write_string(row_index, 0, group.field)
+                worksheet.write_string(row_index, 1, group.logic.upper())
+                worksheet.write_string(row_index, 2, labels[condition.operator])
+                worksheet.write_string(row_index, 3, condition.target)
+                row_index += 1
 
 
 def build_xlsx(
@@ -203,6 +218,7 @@ def build_xlsx(
     max_rows: int,
     log_type: str = "client",
     filters: dict | None = None,
+    event_codes: list[str] | None = None,
 ) -> int:
     """使用 XlsxWriter 流式生成可跨平台部署的双 Sheet 工作簿。"""
     destination.parent.mkdir(parents=True, exist_ok=True)
@@ -235,6 +251,7 @@ def build_xlsx(
                 log_type=log_type,
                 filters=filters,
                 max_rows=max_rows,
+                event_codes=event_codes,
             )
             row_count = _write_detail_sheet(
                 workbook,

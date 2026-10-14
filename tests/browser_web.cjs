@@ -56,7 +56,7 @@ const assert = require('node:assert/strict');
     await page.locator('[data-log-type="web"]').click();
     assert.equal(await page.locator('#clientFilters').isVisible(),false);
     await page.locator('#question').fill('帮我查询 70081134 的数据');
-    assert.equal(await page.locator('#question').inputValue(),'帮我查询70081134的数据');
+    assert.equal(await page.locator('#question').inputValue(),'帮我查询 70081134 的数据');
     fs.mkdirSync('outputs/v004-preview',{recursive:true});
     await page.screenshot({path:'outputs/v004-preview/desktop.png',fullPage:true,animations:'disabled'});
     await page.locator('#estimateButton').click();

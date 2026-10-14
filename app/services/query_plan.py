@@ -11,12 +11,13 @@ SQL_ROOT = Path(__file__).resolve().parents[2] / "sql"
 def build_query_plan(settings, event_code, partitions, log_type="client", filters=None, row_limit=None):
     if log_type not in ("client", "web"):
         raise ValueError("日志类型无效。")
-    if not is_valid_event_code(event_code, log_type):
+    codes = event_code if isinstance(event_code, list) else [event_code]
+    if not codes or len(codes) > 50 or not all(is_valid_event_code(code, log_type) for code in codes):
         raise ValueError("事件编码格式不合法。")
     renderer = EventQueryRenderer(SQL_ROOT / "event_detail.sql")
     if log_type == "web":
         detail = Template((SQL_ROOT / "web_event_detail.sql").read_text(encoding="utf-8")).substitute(
-            event_code=event_code, start_partition=partitions.start, end_partition=partitions.end
+            event_codes=", ".join(f"'{code}'" for code in codes), start_partition=partitions.start, end_partition=partitions.end
         ).strip()
         aggregate = f"""WITH tmp AS ({detail.rstrip(';')})
 SELECT CAST(dt AS STRING) AS event_date, eventid,
@@ -28,7 +29,7 @@ FROM tmp GROUP BY dt, eventid;"""
             partition_column=settings.data_partition_column,
             event_code_column=settings.data_event_code_column,
             user_id_column=settings.data_user_id_column,
-            event_code=event_code, partitions=partitions, filters=filters,
+            event_code=codes, partitions=partitions, filters=filters,
         )
         aggregate = renderer.render_daily_aggregation(detail)
     from app.domain.query_filters import export_limit

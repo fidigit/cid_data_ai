@@ -29,6 +29,7 @@ class QueryEstimateRequest(BaseModel):
 
 
 class QueryEstimateResponse(BaseModel):
+    event_codes: list[str] = Field(default_factory=list)
     log_type: Literal["client", "web"] = "client"
     event_code: str
     days: int
@@ -45,6 +46,8 @@ class QueryEstimateResponse(BaseModel):
 
 
 class JobResponse(BaseModel):
+    event_codes: list[str] = Field(default_factory=list)
+    missing_event_codes: list[str] = Field(default_factory=list)
     total_row_count: int | None = None
     truncated: bool = False
     export_limit: int = 200000
@@ -59,6 +62,7 @@ class JobResponse(BaseModel):
 
 
 class DailyAggregationResponse(BaseModel):
+    event_code: str = ""
     event_date: str
     pv: int
     uv: int

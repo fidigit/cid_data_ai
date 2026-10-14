@@ -47,10 +47,15 @@ def migrate_log_type(bind) -> None:
             ))
         for name, definition in (
             ("filters_json", "TEXT NOT NULL DEFAULT '{}'"),
+            ("event_codes_json", "TEXT NOT NULL DEFAULT '[]'"),
             ("export_limit", "INTEGER NOT NULL DEFAULT 200000"),
         ):
             if name not in columns:
                 connection.execute(text(f"ALTER TABLE query_job_contexts ADD COLUMN {name} {definition}"))
+        if inspect(connection).has_table("daily_aggregations"):
+            aggregate_columns = {c["name"] for c in inspect(connection).get_columns("daily_aggregations")}
+            if "event_code" not in aggregate_columns:
+                connection.execute(text("ALTER TABLE daily_aggregations ADD COLUMN event_code TEXT NOT NULL DEFAULT ''"))
 
 
 def get_db():
