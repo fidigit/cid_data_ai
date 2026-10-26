@@ -25,7 +25,7 @@ def test_filters_generate_matching_columns_and_predicates():
 
 def test_defaults_empty_fields_and_web_isolation():
     detail,_=plan()
-    assert "t3.value3," in detail
+    assert "t3.value" not in detail
     assert "AND sys IN" not in detail and "AND ver IN" not in detail
     detail,_=plan({"value_fields":[]})
     assert "t3.value" not in detail

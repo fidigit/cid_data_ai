@@ -14,7 +14,7 @@ from app.services.auth import SessionPrincipal
 
 class FakeOdpsClient:
     def execute_sql_cost(self, sql: str):
-        assert "90056_0001" in sql
+        assert "90056-0001" in sql
         return SimpleNamespace(input_size=5 * 1024**3, complexity=2, udf_num=0)
 
 

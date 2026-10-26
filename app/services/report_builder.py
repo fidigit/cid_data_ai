@@ -187,10 +187,11 @@ def _write_aggregation_sheet(
         from app.domain.query_filters import effective_filters
         selected = effective_filters(filters)
         worksheet.write(note_row + 1, 0, "sys：" + (", ".join(selected.systems) or "不限"))
-        worksheet.write(note_row + 2, 0, "ver：" + (", ".join(selected.versions) or "不限"))
+        mode_labels = {"greater": "大于", "greater_equal": "大于等于", "exclude": "排除", "enum": "枚举"}
+        worksheet.write(note_row + 2, 0, "ver：" + ((mode_labels[selected.version_mode] + " " + ", ".join(selected.versions)) if selected.versions else "不限"))
         worksheet.write(note_row + 3, 0, "返回字段：" + (", ".join(selected.value_fields) or "仅基础字段"))
         worksheet.write(note_row + 4, 0, "新旧用户：" + ("全部" if len(selected.new_users) == 2 else "新" if selected.new_users == [1] else "旧"))
-        worksheet.write_string(note_row + 5, 0, "自定义筛选组之间：" + selected.value_logic.upper())
+        worksheet.write_string(note_row + 5, 0, "自定义筛选组之间：OR")
     from app.domain.event_codes import missing_event_codes
     missing = missing_event_codes(codes, [item.get("event_code") or item.get("eventid") or event_code for item in aggregation], log_type)
     worksheet.write_string(note_row + 6, 0, "无匹配数据的输入事件：" + (", ".join(missing) or "无"))
@@ -198,9 +199,9 @@ def _write_aggregation_sheet(
         labels = {"eq":"等于", "ne":"不等于", "gt":"大于", "ge":"大于等于", "lt":"小于", "le":"小于等于", "starts":"开头是", "not_starts":"开头不是", "ends":"结尾是", "not_ends":"结尾不是", "contains":"包含", "not_contains":"不包含"}
         row_index = note_row + 7
         for group in selected.value_filters:
-            for condition in group.conditions:
+            for condition_index, condition in enumerate(group.conditions):
                 worksheet.write_string(row_index, 0, group.field)
-                worksheet.write_string(row_index, 1, group.logic.upper())
+                worksheet.write_string(row_index, 1, group.connectors[condition_index - 1].upper() if condition_index else "")
                 worksheet.write_string(row_index, 2, labels[condition.operator])
                 worksheet.write_string(row_index, 3, condition.target)
                 row_index += 1

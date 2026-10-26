@@ -53,15 +53,37 @@ class EventQueryRenderer:
         condition = render_value_filters(selected)
         if condition:
             predicates.append("AND " + condition)
-        for column, items in (("sys", selected.systems), ("ver", selected.versions)):
-            if items:
-                literals = ", ".join("'" + item.replace("'", "''") + "'" for item in items)
-                predicates.append(f"AND {column} IN ({literals})")
+        if selected.systems:
+            literals = ", ".join("'" + item + "'" for item in selected.systems)
+            predicates.append(f"AND sys IN ({literals})")
+        if selected.versions:
+            if selected.version_mode in ("greater", "greater_equal"):
+                parts = [int(part) for part in selected.versions[0].split(".")]
+                parts += [0] * (4 - len(parts))
+                columns = [f"COALESCE(SAFE_CAST(SPLIT_PART(ver, '.', {i}) AS BIGINT), 0)" for i in range(1, 5)]
+                branches = []
+                for index, part in enumerate(parts):
+                    equal_prior = [f"{columns[i]} = {parts[i]}" for i in range(index)]
+                    branches.append("(" + " AND ".join(equal_prior + [f"{columns[index]} > {part}"]) + ")")
+                if selected.version_mode == "greater_equal":
+                    branches.append("(" + " AND ".join(f"{column} = {part}" for column, part in zip(columns, parts)) + ")")
+                predicates.append("AND ver RLIKE '^[0-9]+([.][0-9]+){0,3}$' AND (" + " OR ".join(branches) + ")")
+            else:
+                literals = ", ".join("'" + item + "'" for item in selected.versions)
+                predicates.append(f"AND ver {'NOT IN' if selected.version_mode == 'exclude' else 'IN'} ({literals})")
+        event_column = _identifier(event_code_column, "CID 字段")
+        event_predicates = []
+        for code in codes:
+            if re.search(r"-\d{4}$", code):
+                event_predicates.append(f"{event_column} = '{code}'")
+            elif re.fullmatch(r"\d{5,7}_\d{4}", code):
+                event_predicates.append(f"{event_column} = '{code.replace('_', '-')}'")
+            elif "_" in code:
+                event_predicates.append(f"INSTR({event_column}, '{code}') > 0")
+            else:
+                event_predicates.append(f"{event_column} LIKE '%{code}%'")
         values = {
-            "event_predicates": " OR ".join(
-                f"INSTR(REPLACE({_identifier(event_code_column, 'CID 字段')}, '-', '_'), REPLACE('{code}', '-', '_')) > 0"
-                for code in codes
-            ),
+            "event_predicates": " OR ".join(event_predicates),
             "value_columns": "".join(f"{name},\n        " for name in selected.value_fields),
             "outer_value_columns": "".join(f"t3.{name},\n    " for name in selected.value_fields),
             "filter_predicates": "\n      ".join(predicates),

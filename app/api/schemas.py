@@ -12,7 +12,7 @@ from app.domain.query_filters import QueryFilters
 class QueryRequest(BaseModel):
     filters: QueryFilters = Field(default_factory=QueryFilters)
     log_type: Literal["client", "web"] = "client"
-    question: str = Field(min_length=1, max_length=1000)
+    question: str = Field(min_length=1, max_length=2000)
     start_date: date | None = None
     end_date: date | None = None
     days: int = Field(default=1, ge=1, le=7, exclude=True)
@@ -22,7 +22,7 @@ class QueryRequest(BaseModel):
 class QueryEstimateRequest(BaseModel):
     filters: QueryFilters = Field(default_factory=QueryFilters)
     log_type: Literal["client", "web"] = "client"
-    question: str = Field(min_length=1, max_length=1000)
+    question: str = Field(min_length=1, max_length=2000)
     start_date: date | None = None
     end_date: date | None = None
     days: int = Field(default=1, ge=1, le=7)

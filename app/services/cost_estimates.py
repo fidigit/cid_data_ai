@@ -55,7 +55,7 @@ def issue_cost_estimate_token(
     expires_at = issued_at + ttl_seconds
     payload = {
         "log_type": log_type,
-        "plan_version": 6,
+        "plan_version": 7,
         "query_fingerprint": query_fingerprint,
         "sub": requester_id,
         "cid": event_code,
@@ -94,7 +94,7 @@ def verify_cost_estimate_token(
 
     try:
         payload = json.loads(_decode(body))
-        if payload.get("plan_version") != 6:
+        if payload.get("plan_version") != 7:
             raise CostEstimateTokenError("费用评估版本已更新，请重新评估。")
         claims = CostEstimateClaims(
             query_fingerprint=str(payload["query_fingerprint"]),

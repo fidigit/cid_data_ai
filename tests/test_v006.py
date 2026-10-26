@@ -57,18 +57,19 @@ def test_group_validation():
 
 def test_multi_plan_groups_and_new_users():
     settings=Settings(_env_file=None,data_source_table='events',data_partition_column='dt',data_user_id_column='uid',data_event_code_column='cid_parm')
-    filters={'new_users':[1], 'value_logic':'or','value_filters':[
+    filters={'new_users':[1], 'value_fields':['value1','value2'], 'value_logic':'or','value_filters':[
         {'field':'value1','logic':'or','conditions':[{'operator':'eq','target':'100'},{'operator':'eq','target':'200'}]},
         {'field':'value2','logic':'or','conditions':[{'operator':'starts','target':'abc'},{'operator':'contains','target':'abc'}]}
     ]}
     args=(settings,['170035','170036','90056'],PartitionRange('20260901','20260907'))
     detail,agg=build_query_plan(*args,filters=filters)
     assert "AND is_new = 1" in detail and 't3.is_new' in detail
-    assert "OR INSTR(REPLACE(cid_parm" in detail
-    assert "CAST('200' AS BIGINT)) OR (SUBSTR" in detail
+    assert "cid_parm LIKE '%170035%' OR cid_parm LIKE '%170036%' OR cid_parm LIKE '%90056%'" in detail
+    assert "CAST('200' AS BIGINT)" in detail and "OR ((SUBSTR" in detail
     assert 'GROUP BY event_date, cid_parm' in agg and 'LIMIT' not in agg
     assert detail.endswith('LIMIT 200000;')
-    assert plan_fingerprint((detail,agg)) != plan_fingerprint(build_query_plan(*args,filters=filters|{'value_logic':'and'}))
+    assert plan_fingerprint((detail,agg)) == plan_fingerprint(build_query_plan(*args,filters=filters|{'value_logic':'and'}))
+    assert QueryFilters.model_validate(filters|{'value_logic':'and'}).value_logic == 'or'
     default=build_query_plan(*args)[0]
     assert 'AND is_new' not in default
     web=build_query_plan(settings,['70081134','70081133'],args[2],'web',filters)

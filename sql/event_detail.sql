@@ -35,7 +35,7 @@ FROM (
     FROM $source_table
     WHERE $partition_column >= '$start_partition'
       AND $partition_column <= '$end_partition'
-      AND product_id IN (27090, 27130)
+      AND product_id IN (27090, 27130, 65462)
       $filter_predicates
       AND UPPER(ver) NOT LIKE '%SNAPSHOT%'
       AND ($event_predicates)

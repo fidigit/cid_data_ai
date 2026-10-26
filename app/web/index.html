@@ -613,7 +613,7 @@
       }
 
       .chart-wrap { min-width: 0; overflow-x: auto; }
-      #pvUvChart { display: block; width: 100%; min-width: 540px; height: 245px; }
+      #pvUvChart { display: block; width: 100%; min-width: 540px; height: 285px; }
       .chart-grid { stroke: var(--line); stroke-width: 1; }
       .chart-label { fill: var(--muted); font: 10px var(--mono); }
       .chart-pv { fill: var(--mint); }
@@ -899,7 +899,7 @@
         gap: 32px;
       }
 
-      .query-main { min-width: 0; }
+      .query-main { min-width: 0; container-type: inline-size; }
 
       .input-frame {
         border-color: #42604e;
@@ -1199,7 +1199,9 @@
 
       .recent-row:last-child { border-bottom: 0; }
       .recent-clock { color: #687169; font: 18px/1 var(--mono); }
-      .recent-query { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .recent-query { min-width: 0; display: grid; gap: 3px; }
+      .recent-query-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink); }
+      .recent-filter-summary { color: #82998a; font-size: 11px; line-height: 1.55; overflow-wrap: anywhere; }
       .recent-range { color: #69716a; font-family: var(--mono); }
 
       .recent-use {
@@ -1299,22 +1301,47 @@
     @media(max-width:760px) {.client-filters {grid-template-columns:1fr;} .value-options {grid-template-columns:repeat(5,minmax(0,1fr));}}
     @media(max-width:420px) {.value-options {grid-template-columns:repeat(3,minmax(0,1fr));}}
     /* v0.0.6: local additions, retain the existing dark mint workflow. */
-    .client-filters {grid-template-columns:minmax(140px,1fr) minmax(180px,1.2fr) minmax(110px,.65fr) minmax(320px,2fr);}
-    .value-options {grid-template-columns:repeat(3,minmax(0,1fr));}
+    .client-filters {grid-template-columns:minmax(240px,1.25fr) minmax(180px,1.2fr) minmax(110px,.65fr) minmax(320px,2fr);}
+    .sys-options {display:flex;align-items:center;gap:10px;flex-wrap:wrap;min-height:42px;box-sizing:border-box;border:1px solid var(--line);padding:5px 10px;background:#080d0a;}
+    .sys-options label {display:inline-flex;align-items:center;gap:4px;white-space:nowrap;color:var(--ink);font-size:12px;cursor:pointer;}
+    .value-options {grid-template-columns:repeat(5,minmax(0,1fr));grid-auto-rows:34px;gap:8px;max-height:88px;padding:6px 0;overflow-y:auto;align-content:start;}
     .value-tile {display:flex;min-width:0;}
-    .value-tile button[data-value] {flex:1;padding:7px 3px;font-size:11px;}
-    .value-tile button[data-funnel] {flex:0 0 28px;width:28px;padding:4px;border-left:0;color:var(--mint);}
+    .value-tile button[data-value] {flex:1;padding:7px 2px;font-size:10px;}
+    .value-tile button[data-funnel] {flex:0 0 23px;width:23px;padding:3px;border-left:0;color:var(--mint);}
     .value-tile button[data-funnel]:disabled {opacity:.3;cursor:not-allowed;}
     .value-tile button[data-filtered="true"] {background:rgba(155,242,199,.2);box-shadow:inset 0 -3px var(--mint);}
     .value-tile button:hover {transform:none;}
+    .value-tooltip {position:fixed;z-index:1000;max-width:min(310px,calc(100vw - 24px));padding:8px 12px;border:1px solid #77dab0;border-radius:3px;background:linear-gradient(110deg,#11291d 0%,#1a4530 55%,#16412f 100%);box-shadow:0 12px 30px #0009;color:#c6ffe1;font:11px/1.5 var(--display);pointer-events:none;opacity:0;transform:translateY(5px);transition:opacity .16s ease,transform .16s ease;}
+    .value-tooltip[data-visible="true"] {opacity:1;transform:translateY(0);}
+    @media(prefers-reduced-motion:reduce){.value-tooltip{transition:none;}}
+    .query-criteria {display:grid;grid-template-columns:minmax(0,55fr) minmax(0,45fr);gap:22px;align-items:start;margin-bottom:20px;}
+    .query-criteria > section {min-width:0;}
+    .query-criteria .date-section {margin-top:0;}
+    .query-criteria .date-row {display:block;}
+    .query-criteria .range-hint {margin-top:8px;font-size:11px;line-height:1.5;}
+    .query-criteria .range-hint br {display:none;}
+    .query-layout,#appShell:not([data-stage="input"]) .query-layout {grid-template-columns:minmax(0,1fr);}
+    .action-rail {grid-template-columns:minmax(0,1fr) 20px minmax(660px,900px);}
+    .action-buttons {grid-template-columns:minmax(126px,.75fr) minmax(310px,1.8fr) minmax(126px,.75fr);align-items:center;}
+    #appShell[data-stage="input"] .action-buttons {grid-template-columns:1fr;}
+    .receipt-inline {display:grid;grid-template-columns:minmax(88px,.8fr) minmax(158px,1.7fr) minmax(78px,.9fr);gap:0;align-items:stretch;min-width:0;min-height:64px;padding:8px 13px;border-color:#42604e;background:linear-gradient(110deg,rgba(15,31,22,.88),rgba(9,17,12,.9));box-sizing:border-box;}
+    .receipt-inline:not([data-state="ready"]) {display:none;}
+    .receipt-fact {display:flex;flex-direction:column;justify-content:center;gap:4px;min-width:0;padding:0 11px;}
+    .receipt-fact:first-child {padding-left:0;}
+    .receipt-fact + .receipt-fact {border-left:1px solid #355140;}
+    .receipt-fact small {color:#89a694;font:10px/1.1 var(--display);}
+    .receipt-fact span,.receipt-fact strong {color:var(--ink);font:11px/1.2 var(--mono);white-space:nowrap;}
+    .receipt-success {flex-direction:row;align-items:center;justify-content:flex-start;gap:7px;}
+    .receipt-success::before {content:'✓';display:grid;flex:none;width:22px;height:22px;place-items:center;border:1px solid var(--mint);border-radius:50%;color:var(--mint);font:13px/1 var(--mono);}
+    .receipt-success strong {color:var(--mint);font:600 12px/1.2 var(--display);}
+    .receipt-price strong {color:var(--mint);font-size:16px;}
+    @media(max-width:1300px){.action-rail{grid-template-columns:minmax(0,1fr);gap:12px;}.action-rail .gate{display:none;}}
+    @media(max-width:680px){.action-buttons{grid-template-columns:minmax(0,1fr);}.receipt-inline{grid-template-columns:minmax(0,1fr) auto;}.receipt-price{grid-column:2;grid-row:1;}.receipt-partition{grid-column:1/-1;grid-row:2;padding:8px 0 0;margin-top:7px;border-left:0!important;border-top:1px solid #355140;}}
+    @container (max-width:960px){.client-filters{grid-template-columns:repeat(2,minmax(0,1fr));}}
+    @container (max-width:540px){.client-filters{grid-template-columns:minmax(0,1fr);}.query-criteria{grid-template-columns:minmax(0,1fr);}}
     .new-user-options {display:flex;gap:12px;align-items:center;min-height:42px;border:1px solid var(--line);padding:0 10px;font-size:13px;}
     .new-user-options label {white-space:nowrap;}
-    .value-group-summary {border-left:2px solid var(--mint);padding:12px 16px;margin:0 0 24px;background:rgba(155,242,199,.035);font:13px/1.7 var(--display);}
-    .value-group-summary[hidden] {display:none;}
-    #valueGroupItems {display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:10px;}
-    .group-summary-item {min-width:0;min-height:34px;text-align:left;overflow-wrap:anywhere;padding:6px 10px;font-size:12px;max-width:100%;}
-    .group-connector {color:var(--mint);}
-    #valueGroupLogic,#conditionLogic,#valueFilterDialog select,#valueFilterDialog input {border:1px solid var(--line-strong);background:#090e0b;color:var(--ink);padding:10px;font:13px var(--display);border-radius:2px;min-width:0;}
+    #valueFilterDialog select,#valueFilterDialog input {border:1px solid var(--line-strong);background:#090e0b;color:var(--ink);padding:10px;font:13px var(--display);border-radius:2px;min-width:0;}
     #valueFilterDialog {width:min(580px,calc(100vw - 32px));max-height:85vh;overflow:auto;box-sizing:border-box;border:1px solid #4b6b57;border-radius:5px;background:#0d1410;color:var(--ink);padding:24px;box-shadow:0 24px 90px #0009;}
     #valueFilterDialog::backdrop {background:rgba(0,0,0,.65);}
     #valueFilterDialog header {display:flex;align-items:center;justify-content:space-between;gap:16px;}
@@ -1325,8 +1352,32 @@
     .filter-help {font:12px/1.8 var(--display);color:var(--muted);margin:20px 0;}
     .filter-logic-label {display:flex;align-items:center;gap:14px;font:13px var(--display);margin-bottom:16px;}
     .condition-row {display:grid;grid-template-columns:140px minmax(0,1fr) 38px;gap:10px;margin:10px 0;}
-    .condition-row + .condition-row {position:relative;margin-top:26px;}
-    .condition-row + .condition-row::before {content:attr(data-relation);position:absolute;top:-21px;left:4px;color:var(--mint);font:11px var(--display);}
+    .condition-row + .condition-row {position:relative;}
+    .condition-row + .condition-row::before {content:none;}
+    .condition-connector {display:flex;align-items:center;gap:8px;margin:8px 0 0;color:var(--mint);font:11px var(--display);}
+    .condition-connector select {padding:5px 10px!important;min-width:90px!important;}
+    .version-control {display:flex;gap:6px;min-width:0;}
+    .version-control select {width:82px;flex:none;}
+    #versionMode {width:104px;}
+    .version-control input {min-width:0;flex:1;}
+    .version-exclude-controls {margin-top:8px;}
+    .version-exclude-controls[hidden] {display:none;}
+    #versionExcludeRows {display:grid;gap:6px;}
+    .version-exclude-row {display:flex;gap:6px;}
+    .version-exclude-row input {min-width:0;flex:1;border:1px solid var(--line-strong);background:#090e0b;color:var(--ink);padding:10px;font:13px var(--display);border-radius:2px;}
+    .version-exclude-row button,#addVersionExclude {color:var(--mint);min-height:36px;}
+    #addVersionExclude {margin-top:5px;}
+    .version-control select,.event-row input {border:1px solid var(--line-strong);background:#090e0b;color:var(--ink);padding:10px;font:13px var(--display);border-radius:2px;}
+    .client-event-input {display:grid;gap:9px;margin-bottom:12px;}
+    .client-event-input[hidden],.input-frame[hidden] {display:none!important;}
+    .event-row {display:grid;grid-template-columns:minmax(0,7fr) auto minmax(0,3fr) auto;align-items:center;gap:9px;min-width:0;}
+    .event-row input:first-child,.event-row input.event-suffix {width:100%;min-width:0;box-sizing:border-box;}
+    .event-row input[aria-invalid="true"] {border-color:var(--danger);background:#1a100e;box-shadow:0 0 0 1px rgba(255,140,130,.24);}
+    .input-frame input#question {display:block;width:100%;min-height:48px;box-sizing:border-box;padding:12px 80px 12px 16px;border:0;outline:0;background:transparent;color:var(--ink);font:16px var(--display);}
+    .input-frame input#question::placeholder {color:#525954;}
+    .event-row .event-dash {color:var(--mint);font:20px var(--mono);}
+    .event-row button,#addEventRow {min-height:38px;min-width:38px;padding:4px 10px;color:var(--mint);}
+    #addEventRow {justify-self:start;}
     #conditionRows {max-height:40vh;overflow:auto;}
     #conditionRows input {width:100%;box-sizing:border-box;}
     #conditionRows button {padding:0;font-size:20px;}
@@ -1342,12 +1393,14 @@
     #eventSelections {display:flex;flex-direction:column;gap:10px;max-height:190px;overflow:auto;padding-top:12px;}
     #eventSelections label {overflow-wrap:anywhere;}
     #eventSelections input {accent-color:var(--mint);}
-    .event-legend {display:flex;gap:14px;flex-wrap:wrap;margin:12px 0;font-size:11px;overflow-wrap:anywhere;}
+    .chart-event-label {fill:var(--mint);font:10px var(--mono);}
     .analytics-table {white-space:nowrap;}
     .analytics-panel .panel-head {flex-wrap:wrap;gap:8px;padding-top:12px;padding-bottom:12px;}
     #analyticsRange {overflow-wrap:anywhere;}
     @media(max-width:1100px){.client-filters {grid-template-columns:1fr 1fr;}}
-    @media(max-width:760px){.client-filters {grid-template-columns:1fr;}.value-options {grid-template-columns:repeat(3,minmax(0,1fr));}}
+    @media(max-width:900px){.query-criteria{grid-template-columns:1fr;gap:16px;}}
+    @media(max-width:760px){.client-filters {grid-template-columns:1fr;}.value-options {grid-template-columns:repeat(5,minmax(0,1fr));}}
+    @media(max-width:420px){.value-options{gap:4px;}.value-tile button[data-value]{font-size:9px;}.value-tile button[data-funnel]{flex-basis:18px;width:18px;padding:1px;}}
     @media(max-width:480px){#valueFilterDialog {padding:16px;}.condition-row {grid-template-columns:112px minmax(0,1fr) 30px;gap:6px;}#valueFilterDialog select,#valueFilterDialog input {padding:9px 6px;}#valueFilterDialog footer button {padding:0 10px;}}
   </style>
   </head>
@@ -1372,7 +1425,7 @@
         <div class="brand">
           <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
           MAXCOMPUTE EVENT INTELLIGENCE
-          <small style="font-weight:normal; opacity:.7">v0.0.6</small>
+          <small style="font-weight:normal; opacity:.7">v0.1.3</small>
         </div>
         <div class="topbar-spacer"></div>
         <span class="status-chip">ENV · PROD</span>
@@ -1418,28 +1471,21 @@
                     <button type="button" data-log-type="web" aria-pressed="false">WEB端</button>
                   </div>
                 </div>
-                <div class="client-filters" id="clientFilters">
-                  <div><span class="filter-label">sys / 系统（可多选）</span><details><summary id="sysSummary">不限系统</summary><div class="filter-options" id="sysOptions"><label><input type="checkbox" value="ios"> ios</label><label><input type="checkbox" value="android"> android</label><label><input type="checkbox" value="harmony"> harmony</label></div></details></div>
-                  <div><label class="filter-label" for="versionFilter">ver / 版本</label><input id="versionFilter" type="text" maxlength="3250" placeholder="不限；多个版本用空格分隔" autocomplete="off"></div>
-                  <div><span class="filter-label">是否新用户</span><div id="newUserOptions" class="new-user-options"><label><input type="checkbox" value="1" checked> 新</label><label><input type="checkbox" value="0" checked> 旧</label></div></div>
-                  <div><span class="filter-label">返回字段 / valueX</span><details><summary id="valueSummary">value1, value2, value3</summary><div class="filter-options value-options" id="valueOptions"></div></details></div>
-                </div>
-                <div id="valueGroupSummary" class="value-group-summary" hidden><label>不同字段之间 <select id="valueGroupLogic" aria-label="不同字段之间的关系"><option value="and">与 · 全部满足</option><option value="or">或 · 任一满足</option></select></label><div id="valueGroupItems"></div></div>
-                <div class="field-heading">
-                  <div>
-                    <label class="prompt-label" id="consoleTitle" for="question">输入查询指令 <span class="required-tag">必填</span></label>
-                    <p>输入埋点编码，多个事件用空格分隔（最多50个）。系统将自动生成审核过的 ODPS 查询语句。</p>
-                  </div>
-                </div>
-
                 <div class="query-layout">
                   <div class="query-main">
-                    <div class="input-frame">
-                      <textarea id="question" maxlength="1000" placeholder="例如：170035 170036 90056" autocomplete="off" spellcheck="false"></textarea>
-                      <span class="input-meta"><b id="questionCount">0</b> / 1000</span>
-                    </div>
-
-                    <div class="date-section">
+                    <div class="query-criteria">
+                      <section class="event-section">
+                        <div class="field-heading"><div>
+                          <label class="prompt-label" id="consoleTitle" for="clientEventCode">输入查询事件 <span class="required-tag">必填</span></label>
+                          <p id="queryInstruction">CID 可输入英文字母、数字、下划线；后缀可选。多个事件点击新增（最多50个）。</p>
+                        </div></div>
+                        <div class="client-event-input" id="clientEventInput"><div id="eventRows"></div><button type="button" id="addEventRow">＋ 新增事件</button></div>
+                        <div class="input-frame" hidden>
+                          <input id="question" type="text" maxlength="1000" placeholder="例如：70081134 70081133" autocomplete="off" spellcheck="false">
+                          <span class="input-meta"><b id="questionCount">0</b> / 1000</span>
+                        </div>
+                      </section>
+                      <section class="date-section">
                       <div class="field-heading compact">
                         <div>
                           <span class="prompt-label">日期范围 <span class="required-tag">必选</span></span>
@@ -1450,33 +1496,16 @@
                         <div class="date-range-control"><date-range-picker id="queryDateRange" aria-label="查询日期范围"></date-range-picker></div>
                         <p class="range-hint"><span aria-hidden="true">◷</span> 时间范围越大，数据量越大，费用越高。<br />建议单次查询不超过 7 天。</p>
                       </div>
+                      </section>
+                    </div>
+                    <div class="client-filters" id="clientFilters">
+                      <div><span class="filter-label">sys / 系统（可多选）</span><div class="sys-options" id="sysOptions" role="group" aria-label="系统筛选"><label><input type="checkbox" value="ios" checked> ios</label><label><input type="checkbox" value="android" checked> android</label><label><input type="checkbox" value="harmonyos" checked> harmonyos</label></div></div>
+                      <div><label class="filter-label" for="versionFilter">ver / 版本</label><div class="version-control"><select id="versionMode" aria-label="版本筛选方式"><option value="greater_equal" selected>大于等于</option><option value="greater">大于</option><option value="exclude">排除</option><option value="enum">枚举</option></select><input id="versionFilter" type="text" maxlength="3250" placeholder="如 16.3.1；留空不限" autocomplete="off"></div><div id="versionExcludeControls" class="version-exclude-controls" hidden><div id="versionExcludeRows"></div><button id="addVersionExclude" type="button">＋ 添加排除版本</button></div></div>
+                      <div><span class="filter-label">是否新用户</span><div id="newUserOptions" class="new-user-options"><label><input type="checkbox" value="1" checked> 新</label><label><input type="checkbox" value="0" checked> 旧</label></div></div>
+                      <div><span class="filter-label">选择值 / valueX</span><details><summary id="valueSummary">未选择 valueX</summary><div class="filter-options value-options" id="valueOptions"></div></details></div>
                     </div>
                   </div>
 
-                  <aside class="stage-side">
-                    <section class="guide-card" aria-label="查询指令帮助">
-                      <span class="guide-icon" aria-hidden="true">&gt;_</span>
-                      <div><strong id="queryHelpTitle">如何编写查询指令？</strong><ul><li id="queryHelpCode">明确填写埋点编码</li><li id="queryHelpExample">例如：90056_0001</li><li>多个事件用空格分隔</li></ul></div>
-                    </section>
-
-                    <section class="receipt" id="receipt" data-state="idle" aria-labelledby="receiptTitle">
-                      <header class="panel-head"><strong id="receiptTitle">费用评估回执</strong><span id="receiptId">NO. —</span></header>
-                      <div class="receipt-body">
-                        <div class="receipt-status"><div><small>ASSESSMENT STATUS</small><strong id="statusText">等待评估</strong></div><span class="status-code" id="statusCode">IDLE</span></div>
-                        <dl class="metrics">
-                          <div class="metric"><dt>事件编码</dt><dd id="eventCode">—</dd></div>
-                          <div class="metric"><dt>查询分区</dt><dd id="partitions">等待选择日期</dd></div>
-                          <div class="metric"><dt>合计预计扫描</dt><dd id="scanSize">—</dd></div>
-                          <div class="metric"><dt>最高 SQL 复杂度</dt><dd id="complexity">—</dd></div>
-                          <div class="metric"><dt>UDF 数量</dt><dd id="udfCount">—</dd></div>
-                          <div class="metric"><dt>参考单价</dt><dd id="unitPrice">—</dd></div>
-                        </dl>
-                        <div class="amount-row"><span>预估费用</span><strong id="amount">¥—</strong></div>
-                        <div class="scan-track" aria-hidden="true"><div class="scan-progress" id="scanProgress"></div></div>
-                        <div class="disclaimer" id="estimateState" aria-live="polite">尚未调用 ODPS，也没有执行真实查询。</div>
-                      </div>
-                    </section>
-                  </aside>
                 </div>
 
                 <ol class="run-log" aria-label="任务执行日志" aria-live="polite">
@@ -1494,6 +1523,11 @@
             <div class="gate" id="gate" data-open="false" aria-label="查询门禁">◇</div>
             <div class="action-buttons">
               <button id="estimateButton" type="button">下一步：费用评估 <span aria-hidden="true">→</span></button>
+              <section class="receipt receipt-inline" id="receipt" data-state="idle" aria-label="费用评估回执" aria-live="polite">
+                <div class="receipt-fact receipt-success"><strong id="statusText">等待评估</strong></div>
+                <div class="receipt-fact receipt-partition"><small>查询分区</small><span id="partitions">—</span></div>
+                <div class="receipt-fact receipt-price"><small>预估费用</small><strong id="amount">¥—</strong></div>
+              </section>
               <button id="submitButton" type="button" disabled>查询 <span aria-hidden="true">→</span></button>
             </div>
           </section>
@@ -1506,14 +1540,12 @@
         <header><h2 id="recentTitle">最近查询</h2><span>仅保存在当前浏览器</span></header>
         <div class="recent-list" id="recentQueries"><p class="recent-empty">暂无查询记录，完成一次费用评估后会显示在这里。</p></div>
       </section>
-
-      <section class="analytics-panel" id="analyticsPanel" hidden aria-labelledby="analyticsTitle">
+      <section class="analytics-panel" id="analyticsPanel" aria-labelledby="analyticsTitle">
         <header class="panel-head"><strong id="analyticsTitle">PV / UV analytics</strong><span>按 dt 聚合结果</span><span id="analyticsRange">RANGE · —</span></header>
         <p id="missingEvents" class="missing-events" role="status" hidden></p>
         <div class="analytics-body">
           <div>
             <div class="chart-controls"><details class="event-selector"><summary id="eventSelectionLabel">显示事件</summary><div id="eventSelections"></div></details><div class="metric-toggle" role="group" aria-label="图表指标"><button type="button" data-metric="pv" aria-pressed="true">PV</button><button type="button" data-metric="uv" aria-pressed="false">UV</button></div></div>
-            <div id="eventLegend" class="event-legend"></div>
             <div class="chart-wrap"><svg id="pvUvChart" viewBox="0 0 760 245" role="img" aria-label="按日期展示 PV 和 UV"></svg></div>
           </div>
           <div class="chart-wrap"><table class="analytics-table"><thead><tr><th>日期</th><th>事件</th><th>PV</th><th>UV</th></tr></thead><tbody id="analyticsRows"></tbody></table></div>
@@ -1525,7 +1557,7 @@
       <form id="valueFilterForm">
         <header><div><small>CUSTOM FILTER</small><h2 id="valueFilterTitle">自定义筛选</h2></div><button type="button" id="closeValueFilter" aria-label="关闭自定义筛选">×</button></header>
         <p class="filter-help">数值条件仅支持 BIGINT 整数；文字条件按原文匹配，% 和 _ 不作为通配符。</p>
-        <label class="filter-logic-label">本字段条件之间 <select id="conditionLogic"><option value="and">与 · 全部满足</option><option value="or">或 · 任一满足</option></select></label>
+        <p class="filter-logic-label">每两个条件之间可单独选择“与”或“或”，按页面顺序从左到右组合。</p>
         <div id="conditionRows"></div>
         <button type="button" id="addCondition">＋ 添加条件</button>
         <p id="filterValidation" role="alert"></p>
@@ -1550,18 +1582,9 @@
       const estimateButton = $('#estimateButton');
       const submitButton = $('#submitButton');
       const receipt = $('#receipt');
-      const receiptId = $('#receiptId');
       const statusText = $('#statusText');
-      const statusCode = $('#statusCode');
-      const eventCode = $('#eventCode');
       const partitions = $('#partitions');
-      const scanSize = $('#scanSize');
-      const complexity = $('#complexity');
-      const udfCount = $('#udfCount');
-      const unitPrice = $('#unitPrice');
       const amount = $('#amount');
-      const scanProgress = $('#scanProgress');
-      const estimateState = $('#estimateState');
       const gate = $('#gate');
       const gateCopy = $('#gateCopy');
       const result = $('#result');
@@ -1585,19 +1608,85 @@
       let queryInFlight = false;
       const clientFilters = $('#clientFilters');
       const versionFilter = $('#versionFilter');
-      let selectedValues = ['value1','value2','value3'];
+      const versionMode = $('#versionMode');
+      const versionExcludeRows = $('#versionExcludeRows');
+      function addVersionExcludeRow(value='') {
+        if(versionExcludeRows.children.length>=50)return;
+        const row=document.createElement('div');row.className='version-exclude-row';
+        const input=document.createElement('input');input.type='text';input.maxLength=64;input.placeholder='输入要排除的版本';input.setAttribute('aria-label','排除版本');input.value=value;
+        const remove=document.createElement('button');remove.type='button';remove.textContent='−';remove.setAttribute('aria-label','移除排除版本');
+        input.addEventListener('input',filtersChanged);
+        remove.addEventListener('click',()=>{row.remove();syncVersionExcludeRows();filtersChanged();});
+        row.append(input,remove);versionExcludeRows.appendChild(row);syncVersionExcludeRows();
+      }
+      function syncVersionExcludeRows(){
+        versionExcludeRows.querySelectorAll('button').forEach(button=>{button.disabled=versionExcludeRows.children.length<=1;});
+        $('#addVersionExclude').disabled=versionExcludeRows.children.length>=50;
+      }
+      function syncVersionMode(){
+        const excluded=versionMode.value==='exclude';
+        versionFilter.hidden=excluded;$('#versionExcludeControls').hidden=!excluded;
+        versionFilter.placeholder=versionMode.value==='enum'?'多个版本可用空格或逗号分隔':'如 16.3.1；留空不限';
+        if(excluded&&!versionExcludeRows.children.length)addVersionExcludeRow();
+      }
+      $('#addVersionExclude').addEventListener('click',()=>{addVersionExcludeRow();filtersChanged();});
+      addVersionExcludeRow();syncVersionMode();
+      const eventRows = $('#eventRows');
+      const clientEventInput = $('#clientEventInput');
+      const suffixPattern = /^0{0,3}[1-3]$/;
+      function canonicalSuffix(value) { return suffixPattern.test(value) ? value.padStart(4,'0') : value; }
+      function addEventRow(base='',suffix='') {
+        if(eventRows.children.length>=50)return;
+        const row=document.createElement('div');row.className='event-row';
+        const cid=document.createElement('input');cid.type='text';cid.inputMode='text';cid.maxLength=32;cid.placeholder='CID，例如 UID_WITHOUT_TOKEN';cid.setAttribute('aria-label','CID 编码');cid.value=base;if(!eventRows.children.length)cid.id='clientEventCode';
+        const dash=document.createElement('span');dash.className='event-dash';dash.textContent='-';
+        const sub=document.createElement('input');sub.type='text';sub.inputMode='numeric';sub.maxLength=4;sub.className='event-suffix';sub.placeholder='可选后缀';sub.setAttribute('aria-label','事件后缀');sub.value=suffix;
+        const remove=document.createElement('button');remove.type='button';remove.textContent='−';remove.setAttribute('aria-label','移除事件');
+        remove.addEventListener('click',()=>{row.remove();syncEventRows();eventInputChanged();});
+        sub.addEventListener('blur',()=>{const normalized=canonicalSuffix(sub.value.trim());if(sub.value!==normalized){sub.value=normalized;eventInputChanged();}});
+        [cid,sub].forEach(input=>input.addEventListener('input',()=>{input.removeAttribute('aria-invalid');eventInputChanged();}));
+        row.append(cid,dash,sub,remove);eventRows.appendChild(row);syncEventRows();
+      }
+      function syncEventRows(){[...eventRows.children].forEach(row=>{row.querySelector('button').disabled=eventRows.children.length<=1;});$('#addEventRow').disabled=eventRows.children.length>=50;}
+      function eventInputChanged(){inputRevision+=1;resetAnalytics();if(estimateToken){resetEstimate();setResult('输入已修改，原费用凭证已失效。');}}
+      function invalidEventInput(input,message){input.setAttribute('aria-invalid','true');const error=new Error(message);error.input=input;throw error;}
+      function clientQueryValue(){
+        const codes=[],seen=new Set();
+        eventRows.querySelectorAll('input[aria-invalid="true"]').forEach(input=>input.removeAttribute('aria-invalid'));
+        for(const [index,row] of [...eventRows.children].entries()){
+          const cid=row.children[0],sub=row.children[2];
+          const base=cid.value.trim(), raw=sub.value.trim(), suffix=canonicalSuffix(raw);
+          if(!base)invalidEventInput(cid,`第 ${index+1} 个事件未填写 CID。`);
+          if(!/^[A-Za-z0-9_]{5,32}$/.test(base)||(/^\d+$/.test(base)&&!/^[0-9]{5,7}$/.test(base))||(/^\d+_\d{1,4}$/.test(base)&&!/^\d{5,7}_\d{4}$/.test(base)))invalidEventInput(cid,'CID 须为 5 至 32 位英文字母、数字或下划线；纯数字 CID 须为 5 至 7 位。');
+          if(raw&&!suffixPattern.test(raw))invalidEventInput(sub,'后缀仅支持 1、2、3（可补零至 4 位）。');
+          const code=base+(raw?'-'+suffix:'');
+          if(code.length>32)invalidEventInput(cid,'完整事件编码最多 32 位；填写后缀时 CID 最多 27 位。');
+          if(seen.has(code))invalidEventInput(cid,`第 ${index+1} 个事件编码重复，请移除重复项。`);
+          seen.add(code);
+          codes.push(code);
+        }
+        return codes.join(' ');
+      }
+      function queryValue(){return logType==='web'?question.value.replace(/\s+/gu,' ').trim():clientQueryValue();}
+      function restoreEventRows(raw){
+        eventRows.replaceChildren();
+        const matches=[...String(raw||'').matchAll(/(?<![A-Za-z0-9_-])(\d{5,7}_\d{4}|[A-Za-z0-9_]{5,27}-\d{4}|[A-Za-z0-9_]{5,32})(?![A-Za-z0-9_-])/g)].slice(0,50);
+        if(matches.length)matches.forEach(match=>{const code=match[1];const full=code.match(/^(.+)-(\d{4})$/)||code.match(/^(\d{5,7})_(\d{4})$/);addEventRow(full?full[1]:code,full?canonicalSuffix(full[2]):'');});else addEventRow();
+      }
+      $('#addEventRow').addEventListener('click',()=>{addEventRow();eventInputChanged();});
+      addEventRow();
+      let selectedValues = [];
       let valueFilters = [];
       const operatorLabels = {eq:'等于',ne:'不等于',gt:'大于',ge:'大于等于',lt:'小于',le:'小于等于',starts:'开头是',not_starts:'开头不是',ends:'结尾是',not_ends:'结尾不是',contains:'包含',not_contains:'不包含'};
       const valueDialog = $('#valueFilterDialog');
       let editingValue = null, filterOpener = null;
       function currentFilters() {
         if (logType === 'web') return {systems:[],versions:[],value_fields:[]};
-        return {systems:[...document.querySelectorAll('#sysOptions input:checked')].map(input => input.value).sort(),versions:[...new Set(versionFilter.value.trim().split(/\s+/u).filter(Boolean))].sort(),value_fields:[...selectedValues].sort((a,b) => Number(a.slice(5))-Number(b.slice(5))),new_users:[...document.querySelectorAll('#newUserOptions input:checked')].map(input=>Number(input.value)).sort(),value_logic:$('#valueGroupLogic').value,value_filters:structuredClone(valueFilters)};
+        const versions=versionMode.value==='exclude'?[...new Set([...versionExcludeRows.querySelectorAll('input')].map(input=>input.value.trim()).filter(Boolean))].sort():versionMode.value==='enum'?[...new Set(versionFilter.value.trim().split(/[\s,，]+/u).filter(Boolean))].sort():(versionFilter.value.trim()?[versionFilter.value.trim()]:[]);
+        return {systems:[...document.querySelectorAll('#sysOptions input:checked')].map(input => input.value).sort(),versions,version_mode:versionMode.value,value_fields:[...selectedValues].sort((a,b) => Number(a.slice(5))-Number(b.slice(5))),new_users:[...document.querySelectorAll('#newUserOptions input:checked')].map(input=>Number(input.value)).sort(),value_logic:'or',value_filters:structuredClone(valueFilters)};
       }
       function refreshFilterLabels() {
-        const systems = [...document.querySelectorAll('#sysOptions input:checked')].map(input => input.value);
-        $('#sysSummary').textContent = systems.join(', ') || '不限系统';
-        $('#valueSummary').textContent = selectedValues.length ? `已选 ${selectedValues.length} 项 · ${selectedValues.slice(0,3).join(', ')}${selectedValues.length>3?' …':''}` : '仅基础字段';
+        $('#valueSummary').textContent = selectedValues.length ? `已选 ${selectedValues.length} 项 · ${selectedValues.slice(0,3).join(', ')}${selectedValues.length>3?' …':''}` : '未选择 valueX';
         document.querySelectorAll('#valueOptions button[data-value]').forEach(button => {
           const active = selectedValues.includes(button.dataset.value);
           button.setAttribute('aria-pressed',String(active));
@@ -1610,36 +1699,47 @@
           button.dataset.filtered=String(Boolean(group));
           button.setAttribute('aria-label',`${button.dataset.funnel} 自定义筛选${group?'（已设置）':''}`);
         });
-        $('#valueGroupSummary').hidden=logType==='web'||!valueFilters.length;
-        $('#valueGroupItems').replaceChildren();
-        valueFilters.forEach((group,index)=>{
-          if(index){const connector=document.createElement('span');connector.className='group-connector';connector.textContent=$('#valueGroupLogic').value==='and'?'与':'或';$('#valueGroupItems').appendChild(connector);}
-          const item=document.createElement('button');item.type='button';item.className='group-summary-item';
-          item.textContent=`${group.field}（${group.conditions.map(c=>`${operatorLabels[c.operator]} ${JSON.stringify(c.target)}`).join(group.logic==='and'?' 且 ':' 或 ')}）`;
-          item.addEventListener('click',()=>openValueFilter(group.field,item));$('#valueGroupItems').appendChild(item);
-        });
       }
       function restoreFilters(filters) {
-        const value = filters || {systems:[],versions:[],value_fields:['value1','value2','value3']};
-        document.querySelectorAll('#sysOptions input').forEach(input => {input.checked=(value.systems||[]).includes(input.value);});
+        const value = filters || {systems:['ios','android','harmonyos'],versions:[],version_mode:'greater_equal',value_fields:[]};
+        const restoredSystems=(value.systems?.length?value.systems:['ios','android','harmonyos']).map(system=>system==='harmony'?'harmonyos':system);
+        document.querySelectorAll('#sysOptions input').forEach(input => {input.checked=restoredSystems.includes(input.value);});
+        versionMode.value=value.version_mode||((value.versions||[]).length?'enum':'greater_equal');
         versionFilter.value=(value.versions||[]).join(' ');
-        selectedValues=Array.isArray(value.value_fields)?value.value_fields.filter(name=>/^value([1-9]|1[0-9]|2[0-5])$/.test(name)):['value1','value2','value3'];
+        versionExcludeRows.replaceChildren();
+        (value.versions?.length&&versionMode.value==='exclude'?value.versions:['']).forEach(item=>addVersionExcludeRow(item));
+        syncVersionMode();
+        selectedValues=Array.isArray(value.value_fields)?value.value_fields.filter(name=>/^value([1-9]|1[0-9]|2[0-5])$/.test(name)):[];
         valueFilters=structuredClone(value.value_filters||[]).filter(group=>selectedValues.includes(group.field));
-        $('#valueGroupLogic').value=value.value_logic==='or'?'or':'and';
         document.querySelectorAll('#newUserOptions input').forEach(input=>{input.checked=(value.new_users||[0,1]).includes(Number(input.value));});
         refreshFilterLabels();
       }
       function filtersChanged() {
         refreshFilterLabels();
-        analyticsPanel.hidden=true;
+        resetAnalytics();
         resetEstimate('筛选条件已变化，请重新评估。');
         setResult('筛选条件已变化，原费用凭证已失效。');
       }
+      const valueTooltip=document.createElement('div');valueTooltip.className='value-tooltip';valueTooltip.id='valueTooltip';valueTooltip.setAttribute('role','tooltip');valueTooltip.textContent='如需添加条件筛选，点击右侧漏斗配置';document.body.appendChild(valueTooltip);
+      function showValueTooltip(tile) {
+        const rect=tile.getBoundingClientRect();
+        valueTooltip.style.left=`${Math.max(12,Math.min(rect.left,window.innerWidth-325))}px`;
+        valueTooltip.style.top=`${rect.top>65?rect.top-43:rect.bottom+8}px`;
+        valueTooltip.dataset.visible='true';
+      }
+      function hideValueTooltip(){valueTooltip.dataset.visible='false';}
+      $('#valueOptions').addEventListener('scroll',hideValueTooltip);
       for (let i=1;i<=25;i++) {
         const tile=document.createElement('div');tile.className='value-tile';
+        tile.addEventListener('mouseenter',()=>showValueTooltip(tile));
+        tile.addEventListener('mouseleave',hideValueTooltip);
+        tile.addEventListener('focusin',()=>showValueTooltip(tile));
+        tile.addEventListener('focusout',event=>{if(!tile.contains(event.relatedTarget))hideValueTooltip();});
         const button=document.createElement('button');button.type='button';button.dataset.value=`value${i}`;
+        button.setAttribute('aria-describedby','valueTooltip');
         button.addEventListener('click',()=>{selectedValues=selectedValues.includes(button.dataset.value)?selectedValues.filter(value=>value!==button.dataset.value):[...selectedValues,button.dataset.value];valueFilters=valueFilters.filter(group=>selectedValues.includes(group.field));selectedValues.sort((a,b)=>Number(a.slice(5))-Number(b.slice(5)));filtersChanged();});
         const funnel=document.createElement('button');funnel.type='button';funnel.dataset.funnel=`value${i}`;
+        funnel.setAttribute('aria-describedby','valueTooltip');
         funnel.innerHTML='<svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true"><path d="M3 4h14l-5 6v5l-4 2v-7z" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>';
         funnel.addEventListener('click',()=>openValueFilter(funnel.dataset.funnel,funnel));
         tile.append(button,funnel);$('#valueOptions').appendChild(tile);
@@ -1649,24 +1749,23 @@
         editingValue=field;filterOpener=opener;
         const group=valueFilters.find(item=>item.field===field);
         $('#valueFilterTitle').textContent=`${field} · 自定义筛选`;
-        $('#conditionLogic').value=group?.logic||'and';
         $('#conditionRows').replaceChildren();$('#filterValidation').textContent='';
-        (group?.conditions||[{operator:'eq',target:''},{operator:'eq',target:''}]).forEach(addConditionRow);
+        (group?.conditions||[{operator:'eq',target:''}]).forEach((condition,index)=>addConditionRow(condition,index?group?.connectors?.[index-1]||group?.logic||'and':'and'));
         valueDialog.showModal();
       }
-      function addConditionRow(condition={operator:'eq',target:''}) {
-        if($('#conditionRows').children.length>=20)return;
+      function addConditionRow(condition={operator:'eq',target:''},connector='and') {
+        if(document.querySelectorAll('#conditionRows .condition-row').length>=20)return;
+        if(document.querySelectorAll('#conditionRows .condition-row').length){const relation=document.createElement('label');relation.className='condition-connector';relation.textContent='条件关系';const choice=document.createElement('select');choice.setAttribute('aria-label','与上一条件的关系');choice.add(new Option('与 · AND','and'));choice.add(new Option('或 · OR','or'));choice.value=connector;relation.appendChild(choice);$('#conditionRows').appendChild(relation);}
         const row=document.createElement('div');row.className='condition-row';
         const select=document.createElement('select');select.setAttribute('aria-label','筛选条件');
         Object.entries(operatorLabels).forEach(([value,text])=>select.add(new Option(text,value)));
         select.value=condition.operator;
         const input=document.createElement('input');input.type='text';input.maxLength=1000;input.value=condition.target;input.placeholder='请输入目标值';input.setAttribute('aria-label','目标值');
         const remove=document.createElement('button');remove.type='button';remove.textContent='−';remove.setAttribute('aria-label','删除条件');
-        remove.addEventListener('click',()=>{row.remove();syncConditionButtons();});
+        remove.addEventListener('click',()=>{if(row.previousElementSibling?.classList.contains('condition-connector'))row.previousElementSibling.remove();else if(row.nextElementSibling?.classList.contains('condition-connector'))row.nextElementSibling.remove();row.remove();syncConditionButtons();});
         row.append(select,input,remove);$('#conditionRows').appendChild(row);syncConditionButtons();
       }
-      function syncConditionButtons(){const rows=[...$('#conditionRows').children];rows.forEach(row=>{row.querySelector('button').disabled=rows.length<=1;row.dataset.relation=$('#conditionLogic').value==='and'?'且 · AND':'或 · OR';});$('#addCondition').disabled=rows.length>=20;}
-      $('#conditionLogic').addEventListener('change',syncConditionButtons);
+      function syncConditionButtons(){const rows=[...document.querySelectorAll('#conditionRows .condition-row')];rows.forEach(row=>{row.querySelector('button').disabled=rows.length<=1;});$('#addCondition').disabled=rows.length>=20;}
       $('#valueFilterForm').addEventListener('input',()=>{$('#filterValidation').textContent='';});
       $('#addCondition').addEventListener('click',()=>addConditionRow());
       ['closeValueFilter','cancelValueFilter'].forEach(id=>$('#'+id).addEventListener('click',()=>valueDialog.close()));
@@ -1674,7 +1773,8 @@
       $('#clearValueFilter').addEventListener('click',()=>{valueFilters=valueFilters.filter(group=>group.field!==editingValue);filtersChanged();valueDialog.close();});
       $('#valueFilterForm').addEventListener('submit',event=>{
         event.preventDefault();
-        const conditions=[...$('#conditionRows').children].map(row=>({operator:row.querySelector('select').value,target:row.querySelector('input').value}));
+        const conditions=[...document.querySelectorAll('#conditionRows .condition-row')].map(row=>({operator:row.querySelector('select').value,target:row.querySelector('input').value}));
+        const connectors=[...document.querySelectorAll('#conditionRows .condition-connector select')].map(select=>select.value);
         for(const condition of conditions){
           if(['eq','ne','gt','ge','lt','le'].includes(condition.operator)){
             const target=condition.target.trim();
@@ -1683,16 +1783,16 @@
           }
         }
         valueFilters=valueFilters.filter(group=>group.field!==editingValue);
-        valueFilters.push({field:editingValue,logic:$('#conditionLogic').value,conditions});
+        valueFilters.push({field:editingValue,logic:'and',connectors,conditions});
         valueFilters.sort((a,b)=>Number(a.field.slice(5))-Number(b.field.slice(5)));
         filtersChanged();valueDialog.close();
       });
-      $('#valueGroupLogic').addEventListener('change',filtersChanged);
       $('#newUserOptions').addEventListener('change',event=>{
         if(!$('#newUserOptions input:checked')){event.target.checked=true;setResult('新、旧用户至少选择一项。','error');return;}
         filtersChanged();
       });
-      $('#sysOptions').addEventListener('change',filtersChanged);
+      $('#sysOptions').addEventListener('change',event=>{if(!$('#sysOptions input:checked')){event.target.checked=true;setResult('系统至少选择一项。','error');return;}filtersChanged();});
+      versionMode.addEventListener('change',()=>{syncVersionMode();filtersChanged();});
       versionFilter.addEventListener('input',filtersChanged);
       refreshFilterLabels();
       const logTypeButtons = [...document.querySelectorAll('[data-log-type]')];
@@ -1701,22 +1801,23 @@
         queryInFlight = locked;
         logTypeButtons.forEach(button => { button.disabled = locked; });
         question.readOnly = locked;
+        clientEventInput.inert = locked;
         queryDateRange.inert = locked;
         recentQueries.inert = locked;
         clientFilters.inert = locked;
-        $('#valueGroupSummary').inert = locked;
         estimateButton.disabled = locked;
       }
       function selectLogType(type) {
         logType = type === 'web' ? 'web' : 'client';
+        $('#consoleTitle').htmlFor=logType==='web'?'question':'clientEventCode';
         clientFilters.hidden = logType === 'web';
+        clientEventInput.hidden = logType === 'web';
+        $('.input-frame').hidden = logType !== 'web';
+        $('#queryInstruction').textContent=logType==='web'?'输入 WEB eventid；多个事件用空格分隔（最多50个）。':'CID 可输入英文字母、数字、下划线；后缀可选。多个事件点击新增（最多50个）。';
         refreshFilterLabels();
         logTypeButtons.forEach(button => button.setAttribute('aria-pressed', String(button.dataset.logType === logType)));
-        $('#queryHelpTitle').textContent = logType === 'web' ? '如何查询 WEB 日志？' : '如何编写查询指令？';
-        $('#queryHelpCode').textContent = logType === 'web' ? '输入 eventid 事件编码' : '明确填写埋点编码';
-        $('#queryHelpExample').textContent = logType === 'web' ? '例如：70081134' : '例如：90056_0001';
         question.placeholder = logType === 'web' ? '例如：70081134 70081133' : '例如：170035 170036 90056';
-        analyticsPanel.hidden = true;
+        resetAnalytics();
         resetEstimate('日志类型已切换，请重新评估。');
         setResult(`已选择${typeLabel(logType)}，请输入事件编码并评估费用。`);
       }
@@ -1782,11 +1883,9 @@
         result.dataset.state = state;
       }
 
-      function setReceipt(state, title, code, message) {
+      function setReceipt(state) {
         receipt.dataset.state = state;
-        statusText.textContent = title;
-        statusCode.textContent = code;
-        estimateState.textContent = message;
+        statusText.textContent = '评估通过';
       }
 
       function setWorkflowStage(stage) {
@@ -1809,6 +1908,18 @@
         } catch { return []; }
       }
 
+      function recentFilterSummary(filters, type) {
+        if(type==='web')return 'WEB eventid · 无客户端附加筛选';
+        const selected=filters||{};
+        const systems=selected.systems?.length?selected.systems.join(' / '):'不限';
+        const mode={greater_equal:'≥',greater:'>',exclude:'排除',enum:'枚举'}[selected.version_mode]||'枚举';
+        const versions=selected.versions?.length?`${mode} ${selected.versions.join('、')}`:'不限';
+        const users=selected.new_users?.length===1?(selected.new_users[0]===1?'新':'旧'):'新+旧';
+        const fields=selected.value_fields?.length?selected.value_fields.join('、'):'未选';
+        const conditions=(selected.value_filters||[]).map(group=>`${group.field}(${(group.conditions||[]).map((condition,index)=>`${index?((group.connectors||[])[index-1]==='or'?' 或 ':' 且 '):''}${operatorLabels[condition.operator]||condition.operator} ${condition.target}`).join('')})`).join(' 或 ');
+        return `系统 ${systems} · 版本 ${versions} · 用户 ${users} · value ${fields}${conditions?' · 条件 '+conditions:''}`;
+      }
+
       function renderRecentQueries() {
         const items = readRecentQueries();
         recentQueries.replaceChildren();
@@ -1827,7 +1938,9 @@
           clock.textContent = '◷';
           const query = document.createElement('span');
           query.className = 'recent-query';
-          query.textContent = `[${typeLabel(item.logType)}] ${item.question}`;
+          const title=document.createElement('span');title.className='recent-query-title';title.textContent=`[${typeLabel(item.logType)}] ${item.question}`;
+          const summary=document.createElement('span');summary.className='recent-filter-summary';summary.textContent=recentFilterSummary(item.filters,item.logType);
+          query.append(title,summary);
           const range = document.createElement('span');
           range.className = 'recent-range';
           range.textContent = `${item.start}  ~  ${item.end}`;
@@ -1838,12 +1951,13 @@
           use.addEventListener('click', () => {
             selectLogType(item.logType || 'client');
             if (logType === 'client') restoreFilters(item.filters);
-            question.value = item.question;
+            if(logType==='client')restoreEventRows(item.question);
+            else question.value = item.question;
             questionCount.textContent = String(question.value.length);
             queryDateRange.setRange(item.start, item.end);
             resetEstimate('已载入最近查询，请重新执行费用评估。');
             setResult('已载入最近查询，请检查日期后开始费用评估。');
-            question.focus();
+            (logType==='client'?$('#eventRows input'):question).focus();
           });
           row.append(clock, query, range, use);
           recentQueries.appendChild(row);
@@ -1872,16 +1986,9 @@
         gate.dataset.open = 'false';
         gate.textContent = '◇';
         gateCopy.textContent = '等待有效费用凭证';
-        receiptId.textContent = 'NO. —';
-        eventCode.textContent = '—';
         const range = updateDateRangeLabel();
         partitions.textContent = range ? `${range.start} — ${range.end}` : '日期范围无效';
-        scanSize.textContent = '—';
-        complexity.textContent = '—';
-        udfCount.textContent = '—';
-        unitPrice.textContent = '—';
         amount.textContent = '¥—';
-        scanProgress.style.setProperty('--progress', '0%');
         setReceipt('idle', '等待评估', 'IDLE', message);
         updateLog(logParse, 'idle', '等待解析事件编码', 'IDLE');
         updateLog(logPartition, 'idle', range ? `等待生成 ${range.days} 日查询分区` : '等待有效日期范围', 'IDLE');
@@ -2004,8 +2111,13 @@
       window.addEventListener('pagehide', () => sendVisitHeartbeat(true));
 
       let analyticsData = [], analyticsText = '', chartMetric = 'pv', selectedChartEvents = new Set();
-      let analyticsMissing = [];
+      let analyticsMissing = [], hasAnalyticsResult = false;
+      function resetAnalytics(){
+        hasAnalyticsResult=false;analyticsMissing=[];selectedChartEvents.clear();
+        $('#eventSelections').replaceChildren();renderAnalytics([], '—');
+      }
       function showAnalytics(current,rangeText) {
+        hasAnalyticsResult=true;
         analyticsMissing=current.missing_event_codes||[];
         const rows=(current.aggregation||[]).map(row=>({...row,event_code:row.event_code||current.event_code}));
         selectedChartEvents=new Set(rows.map(row=>row.event_code));
@@ -2028,23 +2140,22 @@
         pvUvChart.replaceChildren();
         analyticsPanel.hidden = false;
         analyticsRange.textContent = `RANGE · ${rangeText}`;
-        $('#missingEvents').hidden=!analyticsMissing.length&&!(!rows.length);
-        $('#missingEvents').textContent=analyticsMissing.length?`未返回匹配数据的事件：${analyticsMissing.join('、')}。请检查日期及筛选条件；此核验基于完整聚合结果。`:'当前查询没有匹配数据。';
+        $('#missingEvents').hidden=!hasAnalyticsResult||(!analyticsMissing.length&&rows.length>0);
+        $('#missingEvents').textContent=analyticsMissing.length?`最终结果未匹配到事件：${analyticsMissing.join('、')}。请检查日期、事件编码及其他筛选条件；核验基于完整聚合结果。`:'当前查询没有匹配数据。';
         const allCodes=[...new Set(rows.map(row=>row.event_code))].sort();
         const codes=allCodes.filter(code=>selectedChartEvents.has(code));
+        $('.event-selector').hidden=allCodes.length<2;
         $('#eventSelectionLabel').textContent=`显示事件 · ${codes.length} / ${allCodes.length}`;
         const dates=[...new Set(rows.map(row=>String(row.event_date)))].sort();
         const colors=['#9bf2c7','#f2c36b','#7dc7ef','#d4a4f4','#ed9e9e','#94c4b5'];
-        $('#eventLegend').replaceChildren();
-        codes.forEach(code=>{const legend=document.createElement('span');legend.style.color=colors[allCodes.indexOf(code)%colors.length];legend.textContent='■ '+code;$('#eventLegend').appendChild(legend);});
         const visibleRows=rows.filter(row=>selectedChartEvents.has(row.event_code));
         const namespace = 'http://www.w3.org/2000/svg';
         const width = Math.max(300, pvUvChart.parentElement.clientWidth, dates.length*Math.max(95,codes.length*88+24)+102);
         pvUvChart.style.minWidth='0';
         pvUvChart.style.width=`${width}px`;
-        pvUvChart.setAttribute('viewBox',`0 0 ${width} 245`);
-        const height = 245;
-        const plot = {left: 76, right: 26, top: 34, bottom: 38};
+        pvUvChart.setAttribute('viewBox',`0 0 ${width} 285`);
+        const height = 285;
+        const plot = {left: 76, right: 26, top: 34, bottom: 75};
         const plotWidth = width - plot.left - plot.right;
         const plotHeight = height - plot.top - plot.bottom;
         const maxValue = visibleRows.reduce((max,item)=>Math.max(max,Number(item[chartMetric]||0)),1)*1.15;
@@ -2060,7 +2171,7 @@
           make('line', {x1: plot.left, x2: width - plot.right, y1: y, y2: y, class: 'chart-grid'});
           make('text', {x: plot.left - 8, y: y + 3, 'text-anchor': 'end', class: 'chart-label'}, Math.round(maxValue * (1 - index / 4)).toLocaleString());
         }
-        if(!codes.length){make('text',{x:width/2,y:125,'text-anchor':'middle',class:'chart-label'},rows.length?'请选择至少一个事件显示':'暂无匹配数据');return;}
+        if(!codes.length){make('text',{x:width/2,y:125,'text-anchor':'middle',class:'chart-label'},rows.length?'请选择至少一个事件显示':hasAnalyticsResult?'暂无匹配数据':'完成查询后，PV / UV 将显示在这里');return;}
         const groupWidth = plotWidth / Math.max(1,dates.length);
         const slotWidth=(groupWidth-24)/codes.length;
         const barWidth = Math.min(30,slotWidth*.55);
@@ -2075,6 +2186,7 @@
           const bar=make('rect', {x:barCenter-barWidth/2,y:plot.top+plotHeight-barHeight,width:barWidth,height:barHeight,style:`fill:${colors[allCodes.indexOf(code)%colors.length]}`,class:`chart-${chartMetric}`});
           const title=document.createElementNS(namespace,'title');title.textContent=`${label} · ${code} · ${chartMetric.toUpperCase()} ${count}`;bar.appendChild(title);
           make('text',{x:barCenter,y:plot.top+plotHeight-barHeight-8,'text-anchor':'middle',class:'chart-value'},count.toLocaleString('en-US'));
+          make('text',{x:barCenter,y:plot.top+plotHeight+20,'text-anchor':'middle',class:'chart-event-label'},code);
           });
           make('text', {x: center, y: height - 13, 'text-anchor': 'middle', class: 'chart-label'}, label.length === 8 ? `${label.slice(4, 6)}-${label.slice(6, 8)}` : label);
         });
@@ -2091,6 +2203,7 @@
 
       question.addEventListener('input', () => {
         inputRevision += 1;
+        resetAnalytics();
         // Preserve separators while typing; normalize redundant whitespace on submission.
         questionCount.textContent = String(question.value.length);
         if (estimateToken) {
@@ -2101,20 +2214,22 @@
 
       function handleDateChange() {
         const range = updateDateRangeLabel();
-        analyticsPanel.hidden = true;
+        resetAnalytics();
         resetEstimate(range ? `日期范围已改为 ${range.start} — ${range.end}，请重新执行费用评估。` : '日期范围无效，请重新选择。');
         setResult(range ? '日期范围已修改，原费用凭证已失效。' : '日期范围无效：仅支持昨天及以前、最长7天。', range ? 'idle' : 'error');
       }
       queryDateRange.addEventListener('rangechange', handleDateChange);
 
       estimateButton.addEventListener('click', async () => {
-        const value = question.value.replace(/\s+/gu, ' ').trim();
+        let value;
+        try { value=queryValue(); }
+        catch(error){setReceipt('error','输入无效','CID_INVALID',error.message);setResult(error.message,'error');(error.input || (logType==='client'?eventRows.querySelector('input'):question))?.focus();return;}
         let range;
         if (!value) {
           setReceipt('error', '缺少查询内容', 'INPUT_REQUIRED', '请先输入包含事件编码的查询问题。');
           updateLog(logParse, 'error', '未检测到可解析内容', 'STOP');
           setResult('请输入需要查询的事件编码。', 'error');
-          question.focus();
+          (logType==='client'?$('#eventRows input'):question).focus();
           return;
         }
         try { range = selectedDateRange(); }
@@ -2163,15 +2278,7 @@
           gate.textContent = '◆';
           gateCopy.textContent = '费用评估已通过，请确认费用后导出数据。';
 
-          const meter = Math.min(100, Math.max(6, Math.log10(payload.input_size_bytes + 1) * 8));
-          scanProgress.style.setProperty('--progress', `${meter}%`);
-          receiptId.textContent = `NO. ${String(Date.now()).slice(-6)}`;
-          eventCode.textContent = `${typeLabel(payload.log_type)} · ${payload.event_code}`;
           partitions.textContent = `${payload.partition_start} — ${payload.partition_end}`;
-          scanSize.textContent = formatBytes(payload.input_size_bytes);
-          complexity.textContent = Number(payload.complexity).toFixed(2);
-          udfCount.textContent = String(payload.udf_count);
-          unitPrice.textContent = `¥${payload.price_per_gib_cny} / GiB`;
           amount.textContent = `¥${Number(payload.estimated_amount_cny).toFixed(4)}`;
           setReceipt('ready', '评估通过', 'PASS', '预估金额包含明细与每日聚合两次查询，按配置单价计算，实际账单以阿里云为准。');
           setWorkflowStage('cost');
@@ -2196,7 +2303,9 @@
       });
 
       submitButton.addEventListener('click', async () => {
-        const value = question.value.replace(/\s+/gu, ' ').trim();
+        let value;
+        try { value=queryValue(); }
+        catch(error){setResult(error.message,'error');error.input?.focus();return;}
         let range;
         try { range = selectedDateRange(); }
         catch (error) { setResult(error.message, 'error'); return; }
@@ -2294,6 +2403,7 @@
       });
 
       initializeDateRange();
+      resetAnalytics();
       renderRecentQueries();
       initializeAuth();
     </script>

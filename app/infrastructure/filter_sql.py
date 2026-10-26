@@ -44,7 +44,10 @@ def render_condition(field, condition):
 
 
 def render_value_filters(selected):
-    groups = ["(" + f" {group.logic.upper()} ".join(
-        render_condition(group.field, condition) for condition in group.conditions
-    ) + ")" for group in selected.value_filters]
-    return "(" + f" {selected.value_logic.upper()} ".join(groups) + ")" if groups else ""
+    groups = []
+    for group in selected.value_filters:
+        expression = render_condition(group.field, group.conditions[0])
+        for connector, condition in zip(group.connectors, group.conditions[1:]):
+            expression = f"({expression} {connector.upper()} {render_condition(group.field, condition)})"
+        groups.append(f"({expression})")
+    return "(" + " OR ".join(groups) + ")" if groups else ""

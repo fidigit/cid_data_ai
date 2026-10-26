@@ -17,6 +17,9 @@ from app.domain.event_codes import (
         ("看看90056_0001数据", "90056_0001"),
         ("帮我查询 160036-0003", "160036-0003"),
         ("查询事件 140961", "140961"),
+        ("看看UID_WITHOUT_TOKEN数据", "UID_WITHOUT_TOKEN"),
+        ("查询 UID_WITHOUT_TOKEN-0001", "UID_WITHOUT_TOKEN-0001"),
+        ("查询 UID_WITHOUT_TOKEN - 0001", "UID_WITHOUT_TOKEN-0001"),
     ],
 )
 def test_extracts_one_event_code_from_natural_language(question: str, expected: str) -> None:
@@ -45,6 +48,6 @@ def test_extracts_seven_digit_event_code_with_suffix() -> None:
     assert is_valid_event_code("1700930_0001")
 
 
-@pytest.mark.parametrize("value", ["12345678", "1700930_001"])
+@pytest.mark.parametrize("value", ["12345678", "1700930_001", "UID' OR 1=1", "UID%TOKEN", "A" * 33, "A" * 28 + "-0001"])
 def test_rejects_out_of_range_event_code_formats(value: str) -> None:
     assert not is_valid_event_code(value)

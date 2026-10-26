@@ -17,8 +17,7 @@ def test_renders_admin_controlled_template() -> None:
         partitions=PartitionRange(start="20260805", end="20260811"),
     )
     assert "FROM app_log.events" in sql
-    assert "REPLACE(cid, '-', '_')" in sql
-    assert "REPLACE('10001_0001', '-', '_')" in sql
+    assert "cid = '10001-0001'" in sql
     assert "ds >= '20260805'" in sql
     assert "ds <= '20260811'" in sql
     assert "device_id AS uid" in sql
