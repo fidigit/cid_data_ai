@@ -47,7 +47,7 @@ const assert = require('node:assert/strict');
     await page.locator('#valueSummary').click();
     await page.locator('[data-value="value1"]').click();
     await page.locator('[data-value="value25"]').click();
-    assert.equal(await page.locator('[data-value="value1"]').getAttribute('aria-pressed'),'true');
+    assert.equal(await page.locator('[data-value="value1"]').getAttribute('aria-pressed'),'false');
     await page.locator('#eventRows .event-row input').first().fill('90036');
     fs.mkdirSync('outputs/v005-preview',{recursive:true});
     await page.screenshot({path:'outputs/v005-preview/client-filters.png',fullPage:true,animations:'disabled'});

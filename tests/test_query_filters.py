@@ -25,12 +25,15 @@ def test_filters_generate_matching_columns_and_predicates():
 
 def test_defaults_empty_fields_and_web_isolation():
     detail,_=plan()
-    assert "t3.value" not in detail
+    assert all(f"t3.value{number}," in detail for number in range(1, 26))
+    assert "t3.value26," not in detail
     assert "AND sys IN" not in detail and "AND ver IN" not in detail
     detail,_=plan({"value_fields":[]})
     assert "t3.value" not in detail
     assert "AND value1 = '1'" in detail
     assert plan({"systems":["ios"],"versions":["1.0"],"value_fields":["value25"]},"web") == plan(log_type="web")
+    detail,_=plan({"value_fields":[f"value{number}" for number in range(1,25)]})
+    assert "t3.value24," in detail and "t3.value25," not in detail
 
 
 @pytest.mark.parametrize("filters",[

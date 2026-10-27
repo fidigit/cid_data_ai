@@ -42,7 +42,7 @@ class QueryFilters(BaseModel):
     systems: list[str] = Field(default_factory=list, max_length=3)
     versions: list[str] = Field(default_factory=list, max_length=50)
     version_mode: Literal["greater", "greater_equal", "exclude", "enum"] | None = None
-    value_fields: list[str] = Field(default_factory=list, max_length=25)
+    value_fields: list[str] = Field(default_factory=lambda: [f"value{i}" for i in range(1, 26)], max_length=25)
     new_users: list[Literal[0, 1]] = Field(default_factory=lambda: [0, 1], min_length=1, max_length=2)
     value_logic: Literal["and", "or"] = "or"
     value_filters: list[ValueFilterGroup] = Field(default_factory=list, max_length=25)
