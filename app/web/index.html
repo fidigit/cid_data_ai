@@ -1285,7 +1285,7 @@
     .client-filters[hidden] {display:none;}
     .filter-label {display:block;margin-bottom:8px;color:var(--muted);font-size:12px;}
     .client-filters input[type="text"], .client-filters summary {width:100%;padding:11px 12px;border:1px solid var(--line);background:#080d0a;color:var(--ink);font:inherit;font-size:13px;box-sizing:border-box;}
-    .client-filters summary {cursor:pointer;}
+    .client-filters summary {cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
     .filter-options {display:flex;gap:8px;flex-wrap:wrap;padding:12px 0;}
     .filter-options label {font-size:13px;color:var(--mint);}
     .value-options {display:grid;grid-template-columns:repeat(5,minmax(0,1fr));max-height:300px;overflow-y:auto;}
@@ -1294,7 +1294,7 @@
     .client-filters input[type="checkbox"] {accent-color:var(--mint);}
     .analytics-body > div {min-width:0;}
     .value-options button,.metric-toggle button {padding:7px;border:1px solid var(--line);background:transparent;color:var(--muted);cursor:pointer;font:inherit;font-size:12px;}
-    .value-options button[aria-pressed="true"],.metric-toggle button[aria-pressed="true"] {background:var(--mint);color:#082017;border-color:var(--mint);}
+    .metric-toggle button[aria-pressed="true"] {background:var(--mint);color:#082017;border-color:var(--mint);}
     .metric-toggle {display:flex;justify-content:flex-end;gap:6px;margin-bottom:8px;}
     .metric-toggle button {min-width:60px;}
     .chart-value {fill:var(--ink);font:12px monospace;}
@@ -1306,10 +1306,9 @@
     .sys-options label {display:inline-flex;align-items:center;gap:4px;white-space:nowrap;color:var(--ink);font-size:12px;cursor:pointer;}
     .value-options {grid-template-columns:repeat(5,minmax(0,1fr));grid-auto-rows:34px;gap:8px;max-height:88px;padding:6px 0;overflow-y:auto;align-content:start;}
     .value-tile {display:flex;min-width:0;}
-    .value-tile button[data-value] {flex:1;padding:7px 2px;font-size:10px;}
-    .value-tile button[data-funnel] {flex:0 0 23px;width:23px;padding:3px;border-left:0;color:var(--mint);}
-    .value-tile button[data-funnel]:disabled {opacity:.3;cursor:not-allowed;}
-    .value-tile button[data-filtered="true"] {background:rgba(155,242,199,.2);box-shadow:inset 0 -3px var(--mint);}
+    .value-tile button[data-value] {flex:1;padding:7px 2px;font-size:10px;color:var(--mint);background:rgba(155,242,199,.08);border-color:rgba(155,242,199,.42);}
+    .value-tile button[data-value]:focus-visible {outline:2px solid var(--mint);outline-offset:2px;}
+    .value-tile button[data-filtered="true"] {background:rgba(155,242,199,.2);border-color:var(--mint);box-shadow:inset 0 -3px var(--mint);}
     .value-tile button:hover {transform:none;}
     .value-tooltip {position:fixed;z-index:1000;max-width:min(310px,calc(100vw - 24px));padding:8px 12px;border:1px solid #77dab0;border-radius:3px;background:linear-gradient(110deg,#11291d 0%,#1a4530 55%,#16412f 100%);box-shadow:0 12px 30px #0009;color:#c6ffe1;font:11px/1.5 var(--display);pointer-events:none;opacity:0;transform:translateY(5px);transition:opacity .16s ease,transform .16s ease;}
     .value-tooltip[data-visible="true"] {opacity:1;transform:translateY(0);}
@@ -1400,7 +1399,7 @@
     @media(max-width:1100px){.client-filters {grid-template-columns:1fr 1fr;}}
     @media(max-width:900px){.query-criteria{grid-template-columns:1fr;gap:16px;}}
     @media(max-width:760px){.client-filters {grid-template-columns:1fr;}.value-options {grid-template-columns:repeat(5,minmax(0,1fr));}}
-    @media(max-width:420px){.value-options{gap:4px;}.value-tile button[data-value]{font-size:9px;}.value-tile button[data-funnel]{flex-basis:18px;width:18px;padding:1px;}}
+    @media(max-width:420px){.value-options{gap:4px;}.value-tile button[data-value]{font-size:9px;}}
     @media(max-width:480px){#valueFilterDialog {padding:16px;}.condition-row {grid-template-columns:112px minmax(0,1fr) 30px;gap:6px;}#valueFilterDialog select,#valueFilterDialog input {padding:9px 6px;}#valueFilterDialog footer button {padding:0 10px;}}
   </style>
   </head>
@@ -1425,7 +1424,7 @@
         <div class="brand">
           <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
           MAXCOMPUTE EVENT INTELLIGENCE
-          <small style="font-weight:normal; opacity:.7">v0.1.4</small>
+          <small style="font-weight:normal; opacity:.7">v0.1.5</small>
         </div>
         <div class="topbar-spacer"></div>
         <span class="status-chip">ENV · PROD</span>
@@ -1502,7 +1501,7 @@
                       <div><span class="filter-label">sys / 系统（可多选）</span><div class="sys-options" id="sysOptions" role="group" aria-label="系统筛选"><label><input type="checkbox" value="ios" checked> ios</label><label><input type="checkbox" value="android" checked> android</label><label><input type="checkbox" value="harmonyos" checked> harmonyos</label></div></div>
                       <div><label class="filter-label" for="versionFilter">ver / 版本</label><div class="version-control"><select id="versionMode" aria-label="版本筛选方式"><option value="greater_equal" selected>大于等于</option><option value="greater">大于</option><option value="exclude">排除</option><option value="enum">枚举</option></select><input id="versionFilter" type="text" maxlength="3250" placeholder="如 16.3.1；留空不限" autocomplete="off"></div><div id="versionExcludeControls" class="version-exclude-controls" hidden><div id="versionExcludeRows"></div><button id="addVersionExclude" type="button">＋ 添加排除版本</button></div></div>
                       <div><span class="filter-label">是否新用户</span><div id="newUserOptions" class="new-user-options"><label><input type="checkbox" value="1" checked> 新</label><label><input type="checkbox" value="0" checked> 旧</label></div></div>
-                      <div><span class="filter-label">选择值 / valueX</span><details><summary id="valueSummary">未选择 valueX</summary><div class="filter-options value-options" id="valueOptions"></div></details></div>
+                      <div><span class="filter-label">增加筛选 / valueX</span><details><summary id="valueSummary">未设置value的筛选条件</summary><div class="filter-options value-options" id="valueOptions"></div></details></div>
                     </div>
                   </div>
 
@@ -1676,7 +1675,6 @@
       $('#addEventRow').addEventListener('click',()=>{addEventRow();eventInputChanged();});
       addEventRow();
       const defaultValueFields = Array.from({length:25},(_,index)=>`value${index+1}`);
-      let selectedValues = [...defaultValueFields];
       let valueFilters = [];
       const operatorLabels = {eq:'等于',ne:'不等于',gt:'大于',ge:'大于等于',lt:'小于',le:'小于等于',starts:'开头是',not_starts:'开头不是',ends:'结尾是',not_ends:'结尾不是',contains:'包含',not_contains:'不包含'};
       const valueDialog = $('#valueFilterDialog');
@@ -1684,21 +1682,17 @@
       function currentFilters() {
         if (logType === 'web') return {systems:[],versions:[],value_fields:[]};
         const versions=versionMode.value==='exclude'?[...new Set([...versionExcludeRows.querySelectorAll('input')].map(input=>input.value.trim()).filter(Boolean))].sort():versionMode.value==='enum'?[...new Set(versionFilter.value.trim().split(/[\s,，]+/u).filter(Boolean))].sort():(versionFilter.value.trim()?[versionFilter.value.trim()]:[]);
-        return {systems:[...document.querySelectorAll('#sysOptions input:checked')].map(input => input.value).sort(),versions,version_mode:versionMode.value,value_fields:[...selectedValues].sort((a,b) => Number(a.slice(5))-Number(b.slice(5))),new_users:[...document.querySelectorAll('#newUserOptions input:checked')].map(input=>Number(input.value)).sort(),value_logic:'or',value_filters:structuredClone(valueFilters)};
+        return {systems:[...document.querySelectorAll('#sysOptions input:checked')].map(input => input.value).sort(),versions,version_mode:versionMode.value,value_fields:[...defaultValueFields],new_users:[...document.querySelectorAll('#newUserOptions input:checked')].map(input=>Number(input.value)).sort(),value_logic:'or',value_filters:structuredClone(valueFilters)};
       }
       function refreshFilterLabels() {
-        $('#valueSummary').textContent = selectedValues.length ? `已选 ${selectedValues.length} 项 · ${selectedValues.slice(0,3).join(', ')}${selectedValues.length>3?' …':''}` : '未选择 valueX';
+        const summary=valueFilters.map(group=>`${group.field} [${group.conditions.map((condition,index)=>`${index?(group.connectors?.[index-1]||group.logic||'and')==='or'?' 或 ':' 与 ':''}${operatorLabels[condition.operator]} ${condition.target}`).join('')}]`).join(', ')||'未设置value的筛选条件';
+        $('#valueSummary').textContent=summary;
+        $('#valueSummary').title=summary;
         document.querySelectorAll('#valueOptions button[data-value]').forEach(button => {
-          const active = selectedValues.includes(button.dataset.value);
-          button.setAttribute('aria-pressed',String(active));
-          button.textContent = button.dataset.value + (active ? ' ×' : '');
-          button.setAttribute('aria-label',(active?'取消选择 ':'选择 ')+button.dataset.value);
-        });
-        document.querySelectorAll('#valueOptions button[data-funnel]').forEach(button=>{
-          button.disabled=!selectedValues.includes(button.dataset.funnel);
-          const group=valueFilters.find(item=>item.field===button.dataset.funnel);
+          const group=valueFilters.find(item=>item.field===button.dataset.value);
           button.dataset.filtered=String(Boolean(group));
-          button.setAttribute('aria-label',`${button.dataset.funnel} 自定义筛选${group?'（已设置）':''}`);
+          button.textContent=button.dataset.value;
+          button.setAttribute('aria-label',`${button.dataset.value} 自定义筛选${group?'（已设置）':''}`);
         });
       }
       function restoreFilters(filters) {
@@ -1710,8 +1704,7 @@
         versionExcludeRows.replaceChildren();
         (value.versions?.length&&versionMode.value==='exclude'?value.versions:['']).forEach(item=>addVersionExcludeRow(item));
         syncVersionMode();
-        selectedValues=Array.isArray(value.value_fields)?value.value_fields.filter(name=>/^value([1-9]|1[0-9]|2[0-5])$/.test(name)):[...defaultValueFields];
-        valueFilters=structuredClone(value.value_filters||[]).filter(group=>selectedValues.includes(group.field));
+        valueFilters=structuredClone(value.value_filters||[]).filter(group=>defaultValueFields.includes(group.field));
         document.querySelectorAll('#newUserOptions input').forEach(input=>{input.checked=(value.new_users||[0,1]).includes(Number(input.value));});
         refreshFilterLabels();
       }
@@ -1721,7 +1714,7 @@
         resetEstimate('筛选条件已变化，请重新评估。');
         setResult('筛选条件已变化，原费用凭证已失效。');
       }
-      const valueTooltip=document.createElement('div');valueTooltip.className='value-tooltip';valueTooltip.id='valueTooltip';valueTooltip.setAttribute('role','tooltip');valueTooltip.textContent='如需添加条件筛选，点击右侧漏斗配置';document.body.appendChild(valueTooltip);
+      const valueTooltip=document.createElement('div');valueTooltip.className='value-tooltip';valueTooltip.id='valueTooltip';valueTooltip.setAttribute('role','tooltip');valueTooltip.textContent='如需添加条件筛选，请点击';document.body.appendChild(valueTooltip);
       function showValueTooltip(tile) {
         const rect=tile.getBoundingClientRect();
         valueTooltip.style.left=`${Math.max(12,Math.min(rect.left,window.innerWidth-325))}px`;
@@ -1738,15 +1731,11 @@
         tile.addEventListener('focusout',event=>{if(!tile.contains(event.relatedTarget))hideValueTooltip();});
         const button=document.createElement('button');button.type='button';button.dataset.value=`value${i}`;
         button.setAttribute('aria-describedby','valueTooltip');
-        button.addEventListener('click',()=>{selectedValues=selectedValues.includes(button.dataset.value)?selectedValues.filter(value=>value!==button.dataset.value):[...selectedValues,button.dataset.value];valueFilters=valueFilters.filter(group=>selectedValues.includes(group.field));selectedValues.sort((a,b)=>Number(a.slice(5))-Number(b.slice(5)));filtersChanged();});
-        const funnel=document.createElement('button');funnel.type='button';funnel.dataset.funnel=`value${i}`;
-        funnel.setAttribute('aria-describedby','valueTooltip');
-        funnel.innerHTML='<svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true"><path d="M3 4h14l-5 6v5l-4 2v-7z" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>';
-        funnel.addEventListener('click',()=>openValueFilter(funnel.dataset.funnel,funnel));
-        tile.append(button,funnel);$('#valueOptions').appendChild(tile);
+        button.addEventListener('click',()=>openValueFilter(button.dataset.value,button));
+        tile.appendChild(button);$('#valueOptions').appendChild(tile);
       }
       function openValueFilter(field,opener) {
-        if(queryInFlight||!selectedValues.includes(field))return;
+        if(queryInFlight||!defaultValueFields.includes(field))return;
         editingValue=field;filterOpener=opener;
         const group=valueFilters.find(item=>item.field===field);
         $('#valueFilterTitle').textContent=`${field} · 自定义筛选`;

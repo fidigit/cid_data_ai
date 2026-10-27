@@ -37,7 +37,7 @@ FROM (
       AND $partition_column <= '$end_partition'
       AND product_id IN (27090, 27130, 65462)
       $filter_predicates
-      AND UPPER(ver) NOT LIKE '%SNAPSHOT%'
+      AND INSTR(UPPER(ver), 'SNAPSHOT') = 0
       AND ($event_predicates)
 ) t3
 LEFT OUTER JOIN biugolite_dim_cid_parm AS t4
@@ -51,9 +51,4 @@ WHERE t3.uid NOT IN (
   AND t3.uid NOT IN (
       SELECT DISTINCT uid
       FROM biugolite_dwd_invalid_user_view
-  )
-  AND SUBSTR(FROM_UNIXTIME(time), 1, 10) = CONCAT(
-      SUBSTR(t3.dt, 1, 4), '-',
-      SUBSTR(t3.dt, 5, 2), '-',
-      SUBSTR(t3.dt, 7, 2)
   );

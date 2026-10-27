@@ -58,16 +58,28 @@ class EventQueryRenderer:
             predicates.append(f"AND sys IN ({literals})")
         if selected.versions:
             if selected.version_mode in ("greater", "greater_equal"):
-                parts = [int(part) for part in selected.versions[0].split(".")]
-                parts += [0] * (4 - len(parts))
-                columns = [f"COALESCE(SAFE_CAST(SPLIT_PART(ver, '.', {i}) AS BIGINT), 0)" for i in range(1, 5)]
-                branches = []
-                for index, part in enumerate(parts):
-                    equal_prior = [f"{columns[i]} = {parts[i]}" for i in range(index)]
-                    branches.append("(" + " AND ".join(equal_prior + [f"{columns[index]} > {part}"]) + ")")
-                if selected.version_mode == "greater_equal":
-                    branches.append("(" + " AND ".join(f"{column} = {part}" for column, part in zip(columns, parts)) + ")")
-                predicates.append("AND ver RLIKE '^[0-9]+([.][0-9]+){0,3}$' AND (" + " OR ".join(branches) + ")")
+                version = selected.versions[0]
+                ver_parts = r"SPLIT(ver, '\\.')"
+                threshold_parts = f"SPLIT('{version}', '\\\\.')"
+                # Predicate order is not guaranteed by SQL. Every conversion on table data
+                # must therefore remain safe even when ver contains values such as "v2".
+                left = (
+                    f"(NVL(SAFE_CAST({ver_parts}[0] AS INT), 0) * 10000 "
+                    f"+ NVL(SAFE_CAST({ver_parts}[1] AS INT), 0) * 100 "
+                    f"+ NVL(SAFE_CAST(SPLIT({ver_parts}[2], '\\\\-')[0] AS INT), 0)) "
+                    f"+ NVL(CONCAT(\"0.\", REGEXP_SUBSTR({ver_parts}[3], '^[0-9]+$')), 0)"
+                )
+                right = (
+                    f"(CAST({threshold_parts}[0] AS INT) * 10000 "
+                    f"+ CAST({threshold_parts}[1] AS INT) * 100 "
+                    f"+ CAST({threshold_parts}[2] AS INT))"
+                )
+                comparison = ">=" if selected.version_mode == "greater_equal" else ">"
+                predicates.append(
+                    "AND ver RLIKE '^([0-9]+|[0-9]+[.][0-9]+|"
+                    "[0-9]+[.][0-9]+[.][0-9]+(-[^.]*)?([.][0-9]+)*)$'"
+                )
+                predicates.append(f"AND {left} {comparison} {right}")
             else:
                 literals = ", ".join("'" + item + "'" for item in selected.versions)
                 predicates.append(f"AND ver {'NOT IN' if selected.version_mode == 'exclude' else 'IN'} ({literals})")

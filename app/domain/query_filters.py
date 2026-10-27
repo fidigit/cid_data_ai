@@ -54,10 +54,10 @@ class QueryFilters(BaseModel):
         if self.version_mode is None:
             self.version_mode = "enum" if self.versions else "greater_equal"
         if self.version_mode in ("greater", "greater_equal") and self.versions:
-            if len(self.versions) != 1 or not re.fullmatch(r"[0-9]+(?:\.[0-9]+){0,3}", self.versions[0]):
-                raise ValueError("大于或大于等于筛选只支持一个纯数字版本号，例如 16.3.1")
-            if any(int(part) >= 2**63 for part in self.versions[0].split(".")):
-                raise ValueError("版本号各段必须在 BIGINT 范围内")
+            if len(self.versions) != 1 or not re.fullmatch(r"[0-9]+(?:\.[0-9]+){2}", self.versions[0]):
+                raise ValueError("大于或大于等于筛选只支持一个三段纯数字版本号，例如 16.3.1")
+            if any(int(part) >= 2**31 for part in self.versions[0].split(".")):
+                raise ValueError("版本号各段必须在 INT 范围内")
             self.versions = [".".join(str(int(part)) for part in self.versions[0].split("."))]
         fields = [group.field for group in self.value_filters]
         if len(set(fields)) != len(fields) or any(name not in self.value_fields for name in fields):

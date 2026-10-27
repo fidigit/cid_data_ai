@@ -18,29 +18,43 @@ def render(codes, filters=None):
     )
 
 
-def test_version_greater_uses_lexicographic_segments():
+def test_version_greater_uses_reference_maxcompute_arithmetic():
     sql = render('160036', {'version_mode': 'greater', 'versions': ['16.3.1']})
-    assert "SAFE_CAST(SPLIT_PART(ver, '.', 1) AS BIGINT)" in sql
-    assert "COALESCE(SAFE_CAST(SPLIT_PART(ver, '.', 1) AS BIGINT), 0) > 16" in sql
-    assert "= 16 AND COALESCE(SAFE_CAST(SPLIT_PART(ver, '.', 2) AS BIGINT), 0) > 3" in sql
-    assert "= 3 AND COALESCE(SAFE_CAST(SPLIT_PART(ver, '.', 3) AS BIGINT), 0) > 1" in sql
-    assert "ver RLIKE '^[0-9]+([.][0-9]+){0,3}$'" in sql
+    assert r"NVL(SAFE_CAST(SPLIT(ver, '\\.')[0] AS INT), 0) * 10000" in sql
+    assert r"NVL(SAFE_CAST(SPLIT(ver, '\\.')[1] AS INT), 0) * 100" in sql
+    assert r"NVL(SAFE_CAST(SPLIT(SPLIT(ver, '\\.')[2], '\\-')[0] AS INT), 0)" in sql
+    assert "NVL(CONCAT(\"0.\", " in sql
+    assert r"REGEXP_SUBSTR(SPLIT(ver, '\\.')[3], '^[0-9]+$')), 0)" in sql
+    assert r" > (CAST(SPLIT('16.3.1', '\\.')[0] AS INT) * 10000" in sql
+    assert "ver RLIKE" in sql
 
 
-def test_version_greater_equal_includes_equal_and_higher_major():
+def test_version_greater_equal_matches_reference_expression():
     sql = render('160036', {'version_mode': 'greater_equal', 'versions': ['16.3.1']})
-    assert "COALESCE(SAFE_CAST(SPLIT_PART(ver, '.', 1) AS BIGINT), 0) > 16" in sql
-    assert "= 16 AND COALESCE(SAFE_CAST(SPLIT_PART(ver, '.', 2) AS BIGINT), 0) = 3 AND COALESCE(SAFE_CAST(SPLIT_PART(ver, '.', 3) AS BIGINT), 0) = 1" in sql
+    assert r" >= (CAST(SPLIT('16.3.1', '\\.')[0] AS INT) * 10000" in sql
+    assert "AND INSTR(UPPER(ver), 'SNAPSHOT') = 0" in sql
     assert QueryFilters.model_validate({}).version_mode == 'greater_equal'
+
+
+def test_nonnumeric_versions_cannot_reach_an_unsafe_cast():
+    sql = render('UID_WITHOUT_TOKEN', {'version_mode': 'greater_equal', 'versions': ['16.4.1']})
+    assert "ver RLIKE '^([0-9]+|" in sql
+    assert r"NVL(SAFE_CAST(SPLIT(ver, '\\.')[0] AS INT), 0)" in sql
+    assert r"NVL(SAFE_CAST(SPLIT(ver, '\\.')[1] AS INT), 0)" in sql
+    assert r"NVL(SAFE_CAST(SPLIT(SPLIT(ver, '\\.')[2], '\\-')[0] AS INT), 0)" in sql
+    assert r"REGEXP_SUBSTR(SPLIT(ver, '\\.')[3], '^[0-9]+$')" in sql
+    assert "CAST(NVL(SPLIT(ver" not in sql
 
 
 def test_version_exclude_and_enum():
     assert "ver NOT IN ('16.3.1', '17.1.0')" in render('160036', {'version_mode':'exclude','versions':['16.3.1','17.1.0']})
     assert "ver IN ('16.3.1', '17.1.0')" in render('160036', {'version_mode':'enum','versions':['16.3.1','17.1.0']})
     assert "AND ver IN" not in render('160036', {'version_mode':'greater','versions':[]})
+    assert "ver RLIKE" not in render('160036', {'version_mode':'greater_equal','versions':[]})
+    assert "ver IN ('v2')" in render('160036', {'version_mode':'enum','versions':['v2']})
 
 
-@pytest.mark.parametrize('value', ['16.3.1 17.0', '16.beta', '9223372036854775808.0'])
+@pytest.mark.parametrize('value', ['16.3.1 17.0', '16.beta', '16.3', '16.3.1.2', '2147483648.0.0'])
 def test_invalid_greater_versions(value):
     with pytest.raises(ValidationError):
         QueryFilters.model_validate({'version_mode':'greater','versions':[value]})
