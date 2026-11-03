@@ -21,6 +21,10 @@ def test_renders_admin_controlled_template() -> None:
     assert "ds >= '20260805'" in sql
     assert "ds <= '20260811'" in sql
     assert "device_id AS uid" in sql
+    for name in ("ip", "country", "province", "city"):
+        assert f"t3.{name}," in sql
+        assert f"        {name}," in sql
+        assert f"AND {name}" not in sql
     assert "SUBSTR(FROM_UNIXTIME(time), 1, 10)" not in sql
     assert "$" not in sql
 

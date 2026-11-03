@@ -4,6 +4,10 @@ SELECT
     t3.hdid,
     sys,
     ver,
+    t3.ip,
+    t3.country,
+    t3.province,
+    t3.city,
     t3.is_new,
     $outer_value_columns
     t3.uid,
@@ -24,6 +28,10 @@ FROM (
         $user_id_column AS uid,
         sys,
         ver,
+        ip,
+        country,
+        province,
+        city,
         is_new,
         $value_columns
         IF(
