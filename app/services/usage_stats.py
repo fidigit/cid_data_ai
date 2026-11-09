@@ -2,12 +2,13 @@ from __future__ import annotations
 
 from collections import defaultdict
 from datetime import UTC, date, datetime, time
+import json
 from zoneinfo import ZoneInfo
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.models import SystemSetting, UsageEvent, UsageVisit, UserAccount
+from app.models import QueryJob, QueryJobContext, SystemSetting, UsageEvent, UsageVisit, UserAccount
 from app.services.auth import SessionPrincipal
 
 
@@ -169,6 +170,7 @@ def build_admin_usage_report(
     db: Session,
     *,
     recent_limit: int = 100,
+    recent_query_limit: int = 100,
     start_date: date | None = None,
     end_date: date | None = None,
     timezone: str = "Asia/Shanghai",
@@ -187,6 +189,31 @@ def build_admin_usage_report(
         )
     visits = list(db.scalars(visits_statement))
     events = list(db.scalars(events_statement))
+    query_counts_statement = select(QueryJob.requester_id, func.count(QueryJob.id)).where(
+        QueryJob.source == "web"
+    )
+    recent_queries_statement = (
+        select(QueryJob, QueryJobContext)
+        .outerjoin(QueryJobContext, QueryJobContext.job_id == QueryJob.id)
+        .where(QueryJob.source == "web")
+    )
+    if start_date and end_date:
+        start, _ = _utc_day_bounds(start_date, timezone)
+        _, end = _utc_day_bounds(end_date, timezone)
+        query_counts_statement = query_counts_statement.where(
+            QueryJob.created_at >= start, QueryJob.created_at <= end
+        )
+        recent_queries_statement = recent_queries_statement.where(
+            QueryJob.created_at >= start, QueryJob.created_at <= end
+        )
+    query_counts = {
+        username: count
+        for username, count in db.execute(query_counts_statement.group_by(QueryJob.requester_id))
+    }
+    recent_query_rows = db.execute(
+        recent_queries_statement.order_by(QueryJob.created_at.desc(), QueryJob.id.desc())
+        .limit(max(1, min(1000, recent_query_limit)))
+    ).all()
     visits_by_user: dict[int, list[UsageVisit]] = defaultdict(list)
     events_by_user: dict[int, list[UsageEvent]] = defaultdict(list)
     for visit in visits:
@@ -207,6 +234,7 @@ def build_admin_usage_report(
                 "display_name": user.display_name,
                 "role": user.role.value,
                 "page_views": len(user_visits),
+                "query_count": int(query_counts.get(user.username, 0)),
                 "stay_seconds": sum(_duration_seconds(item) for item in user_visits),
                 "cost_estimate_count": len(estimate_events),
                 "export_count": len(export_events),
@@ -238,4 +266,60 @@ def build_admin_usage_report(
             }
             for item in visits[:recent_limit]
         ],
+        "recent_queries": [
+            _query_filter_snapshot(job, context)
+            for job, context in recent_query_rows
+        ],
     }
+
+
+def _saved_json(value: str | None, fallback):
+    try:
+        parsed = json.loads(value) if value else fallback
+    except (TypeError, ValueError):
+        return fallback
+    return parsed if isinstance(parsed, type(fallback)) else fallback
+
+
+def _query_filter_snapshot(job: QueryJob, context: QueryJobContext | None) -> dict[str, object]:
+    filters = _saved_json(context.filters_json if context else None, {})
+    codes = _saved_json(context.event_codes_json if context else None, [])
+    return {
+        "job_id": job.id,
+        "username": job.requester_id,
+        "created_at": _as_utc(job.created_at),
+        "status": job.status.value,
+        "log_type": context.log_type if context else "client",
+        "event_codes": [str(code) for code in codes] if codes else [job.event_code],
+        "partition_start": context.partition_start if context else "",
+        "partition_end": context.partition_end if context else "",
+        "systems": filters.get("systems", []),
+        "version_mode": filters.get("version_mode") or "",
+        "versions": filters.get("versions", []),
+        "new_users": filters.get("new_users", [0, 1]),
+        "value_fields": filters.get("value_fields", []),
+        "value_filters": filters.get("value_filters", []),
+    }
+
+
+def query_sql_for_job(db: Session, job_id: str) -> tuple[str, str] | None:
+    """按提交时保存的参数重建明细与聚合 SQL；旧记录缺少上下文时不可重建。"""
+    from app.core.config import get_settings
+    from app.domain.partitions import PartitionRange
+    from app.services.query_plan import build_query_plan
+
+    row = db.execute(
+        select(QueryJob, QueryJobContext)
+        .join(QueryJobContext, QueryJobContext.job_id == QueryJob.id)
+        .where(QueryJob.id == job_id, QueryJob.source == "web")
+    ).first()
+    if row is None:
+        return None
+    job, context = row
+    codes = _saved_json(context.event_codes_json, []) or [job.event_code]
+    filters = _saved_json(context.filters_json, {})
+    return build_query_plan(
+        get_settings(), codes,
+        PartitionRange(context.partition_start, context.partition_end),
+        context.log_type, filters, context.export_limit,
+    )

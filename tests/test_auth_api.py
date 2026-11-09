@@ -51,7 +51,10 @@ def test_login_cookie_and_admin_role_enforcement() -> None:
                 json={"username": "admin01", "password": "admin-pass"},
             )
             assert admin_login.status_code == 200
-            assert client.get("/api/v1/admin/usage").status_code == 200
+            usage = client.get("/api/v1/admin/usage?query_limit=1000")
+            assert usage.status_code == 200
+            assert "recent_queries" in usage.json()
+            assert client.get("/api/v1/admin/usage?query_limit=1001").status_code == 422
 
             assert client.post("/api/v1/auth/logout").status_code == 204
             assert client.get("/api/v1/auth/me").status_code == 401

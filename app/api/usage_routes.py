@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import date, datetime, timedelta
+from typing import Any
 from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
@@ -13,6 +14,7 @@ from app.database import get_db
 from app.services.auth import SessionPrincipal
 from app.services.usage_stats import (
     build_admin_usage_report,
+    query_sql_for_job,
     heartbeat_visit,
     set_daily_user_limit,
     start_visit,
@@ -35,6 +37,7 @@ class UsageUserRow(BaseModel):
     display_name: str | None
     role: str
     page_views: int
+    query_count: int
     stay_seconds: int
     cost_estimate_count: int
     export_count: int
@@ -51,11 +54,34 @@ class RecentVisitRow(BaseModel):
     duration_seconds: int
 
 
+class RecentQueryRow(BaseModel):
+    job_id: str
+    username: str
+    created_at: datetime
+    status: str
+    log_type: str
+    event_codes: list[str]
+    partition_start: str
+    partition_end: str
+    systems: list[str]
+    version_mode: str
+    versions: list[str]
+    new_users: list[int]
+    value_fields: list[str]
+    value_filters: list[dict[str, Any]]
+
+
 class AdminUsageResponse(BaseModel):
     generated_at: datetime
     daily_user_limit_cny: float
     users: list[UsageUserRow]
     recent_visits: list[RecentVisitRow]
+    recent_queries: list[RecentQueryRow]
+
+
+class QuerySqlResponse(BaseModel):
+    detail_sql: str
+    aggregation_sql: str
 
 
 class DailyLimitRequest(BaseModel):
@@ -103,6 +129,7 @@ def admin_usage(
     _: SessionPrincipal = Depends(require_superadmin),
     db: Session = Depends(get_db),
     limit: int = Query(default=100, ge=1, le=500),
+    query_limit: int = Query(default=100, ge=1, le=1000),
     start_date: date | None = Query(default=None),
     end_date: date | None = Query(default=None),
 ) -> AdminUsageResponse:
@@ -116,11 +143,27 @@ def admin_usage(
         build_admin_usage_report(
             db,
             recent_limit=limit,
+            recent_query_limit=query_limit,
             start_date=selected_start,
             end_date=selected_end,
             timezone=settings.timezone,
         )
     )
+
+
+@router.get("/admin/queries/{job_id}/sql", response_model=QuerySqlResponse)
+def admin_query_sql(
+    job_id: str,
+    _: SessionPrincipal = Depends(require_superadmin),
+    db: Session = Depends(get_db),
+) -> QuerySqlResponse:
+    try:
+        statements = query_sql_for_job(db, job_id)
+    except (ValueError, KeyError) as exc:
+        raise HTTPException(status_code=422, detail="该历史查询的筛选条件已无法重建 SQL。") from exc
+    if statements is None:
+        raise HTTPException(status_code=404, detail="查询记录不存在或未保存筛选条件。")
+    return QuerySqlResponse(detail_sql=statements[0], aggregation_sql=statements[1])
 
 
 @router.put("/admin/settings/daily-limit", response_model=DailyLimitResponse)
